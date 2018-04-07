@@ -82,7 +82,7 @@ def busybox_location():
 
     if xbmc.getCondVisibility('system.platform.android'):
         busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
-
+        #log((busybox_dst,xbmcvfs.exists(busybox_dst)))
         if not xbmcvfs.exists(busybox_dst) and busybox_src != busybox_dst:
             xbmcvfs.copy(busybox_src, busybox_dst)
 
@@ -108,7 +108,9 @@ def busybox_location():
 
 @plugin.route('/reset')
 def reset():
-    pass
+    if xbmc.getCondVisibility('system.platform.android'):
+        busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
+        xbmcvfs.delete(busybox_dst)
 
 
 @plugin.route('/update')
@@ -134,12 +136,12 @@ def update():
         xbmcvfs.copy(url,filename)
         if filename.endswith('.xz'):
             f = open(filename+".xml","w")
-            subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=True)
+            subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=windows())
             f.close()
             data = xbmcvfs.File(filename+'.xml','r').read()
         elif filename.endswith('.gz'):
             f = open(filename[:-3],"w")
-            subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=True)
+            subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=windows())
             f.close()
             data = xbmcvfs.File(filename[:-3],'r').read()
         else:
@@ -238,12 +240,12 @@ def select_channels(url):
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
-        subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=True)
+        subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=windows())
         f.close()
         data = xbmcvfs.File(filename+'.xml','r').read()
     elif filename.endswith('.gz'):
         f = open(filename[:-3],"w")
-        subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=True)
+        subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=windows())
         f.close()
         data = xbmcvfs.File(filename[:-3],'r').read()
     else:
