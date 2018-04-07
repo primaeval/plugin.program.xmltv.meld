@@ -6,7 +6,7 @@ import xbmcplugin
 import base64
 import random
 import urllib,urlparse
-import time,datetime
+import time,datetime,calendar
 import threading
 import subprocess
 import json
@@ -118,6 +118,96 @@ def reset():
     channels.clear()
 
 
+def convTime(t):
+    return time.strftime("%Y%m%d%H%M%S",time.localtime(int(t)))
+
+@plugin.route('/update_zap')
+def update_zap():
+    zaps = plugin.get_storage('zaps')
+    zap_channels = plugin.get_storage('zap_channels')
+
+    all_channels = []
+    all_programmes = []
+    streams = []
+    selected_channels = []
+    selected_programmes = []
+
+    gridtimeStart = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
+
+    for url,name in zaps.iteritems():
+        #log((url,name))
+
+        count = 0
+        gridtime = gridtimeStart
+        while count < 2:
+            u = url + '&time=' + str(gridtime)
+            #log(u)
+            data = xbmcvfs.File(u,'r').read()
+            #log(data)
+            j = json.loads(data)
+            channels = j.get('channels')
+            for channel in channels:
+                callSign = channel.get('callSign')
+                id = channel.get('id') #channelId
+                thumbnail = "http:" + channel.get('thumbnail').replace('?w=55','')
+                events = channel.get('events')
+                for event in events:
+                    startTime = calendar.timegm(time.strptime(event.get('startTime'), '%Y-%m-%dT%H:%M:%SZ'))
+                    endTime = calendar.timegm(time.strptime(event.get('endTime'), '%Y-%m-%dT%H:%M:%SZ'))
+                    program = event.get('program')
+                    title = program.get('title')
+                    episodeTitle = program.get('episodeTitle')
+                    shortDesc = program.get('shortDesc')
+                    releaseYear = program.get('releaseYear')
+                    season = program.get('season')
+                    episode = program.get('episode')
+                    log((callSign,id,startTime,endTime,title,episodeTitle,releaseYear,season,episode,shortDesc))
+
+                    startTime = convTime(startTime)
+                    is_dst = time.daylight and time.localtime().tm_isdst > 0
+                    TZoffset = "%.2d%.2d" %(- (time.altzone if is_dst else time.timezone)/3600, 0)
+                    endTime = convTime(endTime)
+                    lang = "en"
+                    programme = '\t<programme start=\"' + startTime + ' ' + TZoffset + '\" stop=\"' + endTime + ' ' + TZoffset + '\" channel=\"' + id + '.zap2epg' + '\">\n'
+                    if title:
+                        programme += '\t\t<title lang=\"' + lang + '\">' + title + '</title>\n'
+                    if episodeTitle:
+                        programme += '\t\t<sub-title lang=\"'+ lang + '\">' + episodeTitle + '</sub-title>\n'
+                    if shortDesc:
+                        programme += '\t\t<desc lang=\"' + lang + '\">' + shortDesc + '</desc>\n'
+                    if season and episode:
+                        programme += "\t\t<episode-num system=\"xmltv_ns\">" + season +  "." + episode + ".</episode-num>\n"
+                    if releaseYear:
+                        programme += '\t\t<date>' + releaseYear + '</date>\n'
+                    programme += "\t</programme>\n"
+
+                    all_programmes.append(programme)
+
+            count += 1
+            gridtime = gridtime + 10800
+
+    log(all_programmes)
+
+    return
+
+
+    f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/xmltv.xml",'w')
+    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    f.write('<tv generator-info-name="WebGrab+Plus/w MDB &amp; REX Postprocess -- version V2.1.4 -- Jan van Straaten" generator-info-url="http://forums.openpli.org">')
+    f.write('\n'.join(selected_channels))
+    f.write('\n')
+    f.write('\n'.join(selected_programmes))
+    f.write('\n')
+    f.write('</tv>\n')
+    f.close()
+
+    f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/channels.m3u8",'w')
+    f.write('#EXTM3U\n\n')
+    f.write('\n'.join(streams).encode("utf8"))
+    f.write('\n')
+    f.close()
+
+
 @plugin.route('/update')
 def update():
     xbmcgui.Dialog().notification("xmltv Meld","update starting")
@@ -205,7 +295,7 @@ def update():
 
 @plugin.route('/start_update')
 def start_update():
-    t = threading.Thread(target=update)
+    t = threading.Thread(target=update_zap)
     t.start()
 
 
