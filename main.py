@@ -73,10 +73,13 @@ def reset():
 @plugin.route('/update')
 def update():
     xmltv = plugin.get_storage('xmltv')
+    channels = plugin.get_storage('channels')
 
     all_channels = []
     all_programmes = []
     streams = []
+    selected_channels = []
+    selected_programmes = []
 
     htmlparser = HTMLParser()
 
@@ -99,13 +102,13 @@ def update():
         else:
             data = xbmcvfs.File(filename,'r').read()
 
-        channels = re.findall('(<channel.*?</channel>)', data, flags=(re.I|re.DOTALL))
-        programmes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
+        xchannels = re.findall('(<channel.*?</channel>)', data, flags=(re.I|re.DOTALL))
+        xprogrammes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
 
-        all_channels = all_channels + channels
-        all_programmes = all_programmes + programmes
+        all_channels = all_channels + xchannels
+        all_programmes = all_programmes + xprogrammes
 
-        for channel in channels:
+        for channel in xchannels:
             id = re.search('id="(.*?)"', channel)
             if id:
                 id = htmlparser.unescape(id.group(1))
@@ -118,15 +121,25 @@ def update():
             if icon:
                 icon = icon.group(1)
 
-            streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,id,icon,group,name,'http://localhost'))
+            if id in channels:
+                selected_channels.append(channel)
+                streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,id,icon,group,name,'http://localhost'))
+
+        for programme in xprogrammes:
+            id = re.search('channel="(.*?)"', programme)
+            if id:
+                id = htmlparser.unescape(id.group(1))
+
+                if id in channels:
+                    selected_programmes.append(programme)
 
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="WebGrab+Plus/w MDB &amp; REX Postprocess -- version V2.1.4 -- Jan van Straaten" generator-info-url="http://forums.openpli.org">')
-    f.write('\n'.join(all_channels))
+    f.write('\n'.join(selected_channels))
     f.write('\n')
-    f.write('\n'.join(all_programmes))
+    f.write('\n'.join(selected_programmes))
     f.write('\n')
     f.write('</tv>\n')
     f.close()
@@ -158,9 +171,21 @@ def delete_xmltv(url):
     del xmltv[url]
 
 
-@plugin.route('/get_xmltv')
-def get_xmltv():
-    pass
+@plugin.route('/add_channel/<name>/<id>')
+def add_channel(name,id):
+    name = name.decode("utf")
+    id = id.decode("utf8")
+
+    channels = plugin.get_storage('channels')
+    channels[id] = name
+
+
+@plugin.route('/delete_channel/<id>')
+def delete_channel(id):
+    id = id.decode("utf8")
+
+    channels = plugin.get_storage('channels')
+    del channels[id]
 
 
 @plugin.route('/select_channels/<url>')
@@ -184,6 +209,7 @@ def select_channels(url):
     htmlparser = HTMLParser()
 
     items = []
+    channels = plugin.get_storage('channels')
 
     match = re.findall('<channel(.*?)</channel>', data, flags=(re.I|re.DOTALL))
     if match:
@@ -201,11 +227,20 @@ def select_channels(url):
             if icon:
                 icon = icon.group(1)
 
+            context_items = []
+            context_items.append(("Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+
+            if id in channels:
+                label = "[COLOR yellow]%s[/COLOR]" % name
+            else:
+                label = name
+
             items.append(
             {
-                'label': name,
-                'path': plugin.url_for('select_channels',url=url),
+                'label': label,
+                'path': plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")),
                 'thumbnail':icon,
+                'context_menu': context_items,
             })
 
     return items
@@ -277,14 +312,14 @@ def index():
 
     items.append(
     {
-        'label': "Rytec xmltv",
+        'label': "Rytec",
         'path': plugin.url_for('rytec_xmltv'),
         'thumbnail':get_icon_path('settings'),
     })
 
     items.append(
     {
-        'label': "koditvepg.com xmltv",
+        'label': "koditvepg.com",
         'path': plugin.url_for('koditvepg_xmltv'),
         'thumbnail':get_icon_path('settings'),
     })
