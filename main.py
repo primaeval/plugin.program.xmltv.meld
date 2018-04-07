@@ -113,6 +113,8 @@ def reset():
 
 @plugin.route('/update')
 def update():
+    xbmcgui.Dialog().notification("xmltv Meld","update starting")
+
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
 
@@ -191,7 +193,7 @@ def update():
     f.write('\n')
     f.close()
 
-
+    xbmcgui.Dialog().notification("xmltv Meld","update finished")
 
 
 @plugin.route('/start_update')
