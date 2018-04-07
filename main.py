@@ -112,6 +112,11 @@ def reset():
         busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
         xbmcvfs.delete(busybox_dst)
 
+    xmltv = plugin.get_storage('xmltv')
+    xmltv.clear()
+    channels = plugin.get_storage('channels')
+    channels.clear()
+
 
 @plugin.route('/update')
 def update():
@@ -233,6 +238,35 @@ def delete_channel(id):
     del channels[id]
 
 
+@plugin.route('/add_zap/<name>/<url>')
+def add_zap(name,url):
+    zaps = plugin.get_storage('zaps')
+    zaps[url] = name
+
+
+@plugin.route('/delete_zap/<url>')
+def delete_zap(url):
+    zaps = plugin.get_storage('zaps')
+    del zaps[url]
+
+@plugin.route('/delete_zap_channel/<id>')
+def delete_zap_channel(id):
+    id = id.decode("utf8")
+
+    channels = plugin.get_storage('zap_channels')
+    del channels[id]
+
+@plugin.route('/add_zap_channel/<name>/<id>')
+def add_zap_channel(name,id):
+    name = name.decode("utf")
+    id = id.decode("utf8")
+
+    channels = plugin.get_storage('zap_channels')
+    channels[id] = name
+
+
+
+
 @plugin.route('/select_channels/<url>')
 def select_channels(url):
     filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
@@ -295,10 +329,10 @@ def select_channels(url):
 def rytec_xmltv():
 
     sources = xbmcvfs.File("http://rytecepg.ipservers.eu/epg_data/rytec.King.sources.xml","r").read()
-    log(sources)
+    #log(sources)
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
-    log(urls)
+    #log(urls)
 
     items = []
     xmltv = plugin.get_storage('xmltv')
@@ -350,6 +384,88 @@ def koditvepg_xmltv():
 
     return sorted(items, key = lambda x: remove_formatting(x["label"]))
 
+@plugin.route('/select_zap_channels/<country>/<zipcode>/<device>/<lineup>/<headend>')
+def select_zap_channels(country, zipcode, device, lineup, headend):
+    gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
+
+    url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
+    data = xbmcvfs.File(url,'r').read()
+    j = json.loads(data)
+    channels = j.get('channels')
+
+    items = []
+    zap_channels = plugin.get_storage('zap_channels')
+
+
+    for channel in channels:
+        name = channel.get('callSign')
+        id = channel.get('id') #channelId
+        icon = "http:" + channel.get('thumbnail').replace('?w=55','')
+        #log(icon)
+
+        context_items = []
+        context_items.append(("Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+
+        if id in zap_channels:
+            label = "[COLOR yellow]%s[/COLOR]" % name
+        else:
+            label = name
+
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('add_zap_channel',name=name.encode("utf8"), id=id.encode("utf8")),
+            'thumbnail':icon,
+            'context_menu': context_items,
+        })
+
+    return items
+
+
+@plugin.route('/zap')
+def zap():
+    zaps = plugin.get_storage('zaps')
+
+    country = "USA"
+    zipcode = "10001"
+    url = 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/' + country + '/' + zipcode + '/gapzap'
+
+    sources = xbmcvfs.File(url,"r").read()
+    #log(sources)
+
+    j = json.loads(sources)
+    providers = j.get('Providers')
+
+    items = []
+
+    for provider in providers:
+
+        name = provider.get('name')
+        device = provider.get('device') or '-'
+        lineup = provider.get('lineupId') or '-'
+        headend = provider.get('headendId') or '-'
+
+        label = "%s / %s / %s / %s" % (name,device,lineup,headend)
+
+        #gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
+        url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode  + '&pref=-&userId=-' # + '&time=' + str(gridtime)
+
+        context_items = []
+        if url not in zaps:
+            context_items.append(("Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
+            label = label
+        else:
+            context_items.append(("Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
+            label = "[COLOR yellow]%s[/COLOR]" % label
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            #'thumbnail':get_icon_path('settings'),
+            'context_menu': context_items,
+        })
+    return items
+
 
 @plugin.route('/')
 def index():
@@ -366,6 +482,13 @@ def index():
     {
         'label': "koditvepg.com",
         'path': plugin.url_for('koditvepg_xmltv'),
+        'thumbnail':get_icon_path('settings'),
+    })
+
+    items.append(
+    {
+        'label': "Zap",
+        'path': plugin.url_for('zap'),
         'thumbnail':get_icon_path('settings'),
     })
 
