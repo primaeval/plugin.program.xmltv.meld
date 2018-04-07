@@ -65,6 +65,47 @@ def delete(path):
     xbmcvfs.rmdir(path)
 
 
+def windows():
+    if os.name == 'nt':
+        return True
+    else:
+        return False
+
+
+def android_get_current_appid():
+    with open("/proc/%d/cmdline" % os.getpid()) as fp:
+        return fp.read().rstrip("\0")
+
+
+def busybox_location():
+    busybox_src = xbmc.translatePath(plugin.get_setting('busybox'))
+
+    if xbmc.getCondVisibility('system.platform.android'):
+        busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
+
+        if not xbmcvfs.exists(busybox_dst) and busybox_src != busybox_dst:
+            xbmcvfs.copy(busybox_src, busybox_dst)
+
+        busybox = busybox_dst
+    else:
+        busybox = busybox_src
+
+    if busybox:
+        try:
+            st = os.stat(busybox)
+            if not (st.st_mode & stat.S_IXUSR):
+                try:
+                    os.chmod(busybox, st.st_mode | stat.S_IXUSR)
+                except:
+                    pass
+        except:
+            pass
+    if xbmcvfs.exists(busybox):
+        return busybox
+    else:
+        xbmcgui.Dialog().notification("xmltv Meld","busybox not found",xbmcgui.NOTIFICATION_ERROR)
+
+
 @plugin.route('/reset')
 def reset():
     pass
@@ -87,16 +128,16 @@ def update():
 
         group = xmltv[url]
 
-        filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/" + url.rsplit('/',1)[-1])
+        filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
         xbmcvfs.copy(url,filename)
         if filename.endswith('.xz'):
             f = open(filename+".xml","w")
-            subprocess.call(["busybox","xz","-dc",filename],stdout=f,shell=True)
+            subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=True)
             f.close()
             data = xbmcvfs.File(filename+'.xml','r').read()
         elif filename.endswith('.gz'):
             f = open(filename[:-3],"w")
-            subprocess.call(["busybox","gunzip","-dc",filename],stdout=f,shell=True)
+            subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=True)
             f.close()
             data = xbmcvfs.File(filename[:-3],'r').read()
         else:
@@ -190,17 +231,17 @@ def delete_channel(id):
 
 @plugin.route('/select_channels/<url>')
 def select_channels(url):
-    filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/" + url.rsplit('/',1)[-1])
+    filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
     xbmcvfs.copy(url,filename)
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
-        subprocess.call(["busybox","xz","-dc",filename],stdout=f,shell=True)
+        subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=True)
         f.close()
         data = xbmcvfs.File(filename+'.xml','r').read()
     elif filename.endswith('.gz'):
         f = open(filename[:-3],"w")
-        subprocess.call(["busybox","gunzip","-dc",filename],stdout=f,shell=True)
+        subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=True)
         f.close()
         data = xbmcvfs.File(filename[:-3],'r').read()
     else:
