@@ -222,15 +222,21 @@ def update():
 
         group = xmltv[url]
 
+        if '\\' in url:
+            url = url.replace('\\','/')
         filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
         xbmcvfs.copy(url,filename)
+
         if filename.endswith('.xz'):
             f = open(filename+".xml","w")
             subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=windows())
             f.close()
             data = xbmcvfs.File(filename+'.xml','r').read()
         elif filename.endswith('.gz'):
-            f = open(filename[:-3],"w")
+            try:
+                f = open(filename[:-3],"w")
+            except:
+                f = open(filename,"w")
             subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=windows())
             f.close()
             data = xbmcvfs.File(filename[:-3],'r').read()
@@ -365,6 +371,8 @@ def add_zap_channel(name,id):
 
 @plugin.route('/select_channels/<url>')
 def select_channels(url):
+    if '\\' in url:
+        url = url.replace('\\','/')
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
     xbmcvfs.copy(url,filename)
 
@@ -374,7 +382,10 @@ def select_channels(url):
         f.close()
         data = xbmcvfs.File(filename+'.xml','r').read()
     elif filename.endswith('.gz'):
-        f = open(filename[:-3],"w")
+        try:
+            f = open(filename[:-3],"w")
+        except:
+            f = open(filename,"w")
         subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=windows())
         f.close()
         data = xbmcvfs.File(filename[:-3],'r').read()
@@ -423,12 +434,20 @@ def select_channels(url):
 
 @plugin.route('/add_custom_xmltv_dialog')
 def add_custom_xmltv_dialog():
-    url = xbmcgui.Dialog().input("xmltv Meld: xmltv url?")
-    if url:
-        name = xbmcgui.Dialog().input("xmltv Meld: xmltv Name?")
-        if name:
-            add_custom_xmltv(name,url)
-
+    location = xbmcgui.Dialog().select("xmltv location",["Url","File"])
+    if location > -1:
+        if location == 0:
+            url = xbmcgui.Dialog().input("xmltv Url")
+            if url:
+                name = xbmcgui.Dialog().input("xmltv Name")
+                if name:
+                    add_custom_xmltv(name,url)
+        else:
+            url = xbmcgui.Dialog().browse(1,"xmltv File",'files')
+            if url:
+                name = xbmcgui.Dialog().input("xmltv Name?")
+                if name:
+                    add_custom_xmltv(name,url)
 
 @plugin.route('/custom_xmltv')
 def custom_xmltv():
