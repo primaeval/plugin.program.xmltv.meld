@@ -124,10 +124,12 @@ def convTime(t):
 @plugin.route('/update_zap')
 def update_zap():
     zaps = plugin.get_storage('zaps')
+    log(zaps.keys())
     zap_channels = plugin.get_storage('zap_channels')
+    log(zap_channels.keys())
 
-    all_channels = []
-    all_programmes = []
+    #all_channels = []
+    #all_programmes = []
     streams = []
     selected_channels = []
     selected_programmes = []
@@ -149,11 +151,30 @@ def update_zap():
             for channel in channels:
                 callSign = channel.get('callSign')
                 id = channel.get('id') #channelId
+
+                if id not in zap_channels:
+                    continue
+
                 thumbnail = "http:" + channel.get('thumbnail').replace('?w=55','')
+
+                xchannel = '<channel id="' + id + '">\n'
+                xchannel += '\t<display-name>' + callSign + '</display-name>\n'
+                if thumbnail:
+                    xchannel += '\t<icon src="' + thumbnail + '"/>\n'
+                xchannel += '</channel>\n'
+
+                #log(id)
+                if id in zap_channels:
+                    selected_channels.append(xchannel)
+
                 events = channel.get('events')
                 for event in events:
-                    startTime = calendar.timegm(time.strptime(event.get('startTime'), '%Y-%m-%dT%H:%M:%SZ'))
-                    endTime = calendar.timegm(time.strptime(event.get('endTime'), '%Y-%m-%dT%H:%M:%SZ'))
+
+                    startTime = time.strptime(event.get('startTime'), '%Y-%m-%dT%H:%M:%SZ')
+                    endTime = time.strptime(event.get('endTime'), '%Y-%m-%dT%H:%M:%SZ')
+                    startTime = time.strftime("%Y%m%d%H%M%S +0000",startTime)
+                    endTime = time.strftime("%Y%m%d%H%M%S +0000",endTime)
+
                     program = event.get('program')
                     title = program.get('title')
                     episodeTitle = program.get('episodeTitle')
@@ -161,42 +182,41 @@ def update_zap():
                     releaseYear = program.get('releaseYear')
                     season = program.get('season')
                     episode = program.get('episode')
-                    log((callSign,id,startTime,endTime,title,episodeTitle,releaseYear,season,episode,shortDesc))
 
-                    startTime = convTime(startTime)
-                    is_dst = time.daylight and time.localtime().tm_isdst > 0
-                    TZoffset = "%.2d%.2d" %(- (time.altzone if is_dst else time.timezone)/3600, 0)
-                    endTime = convTime(endTime)
                     lang = "en"
-                    programme = '\t<programme start=\"' + startTime + ' ' + TZoffset + '\" stop=\"' + endTime + ' ' + TZoffset + '\" channel=\"' + id + '.zap2epg' + '\">\n'
+                    programme = '<programme start=\"' + startTime + '\" stop=\"' + endTime + '\" channel=\"' + id  + '\">\n'
                     if title:
-                        programme += '\t\t<title lang=\"' + lang + '\">' + title + '</title>\n'
+                        programme += '\t<title lang=\"' + lang + '\">' + title + '</title>\n'
                     if episodeTitle:
-                        programme += '\t\t<sub-title lang=\"'+ lang + '\">' + episodeTitle + '</sub-title>\n'
+                        programme += '\t<sub-title lang=\"'+ lang + '\">' + episodeTitle + '</sub-title>\n'
                     if shortDesc:
-                        programme += '\t\t<desc lang=\"' + lang + '\">' + shortDesc + '</desc>\n'
+                        programme += '\t<desc lang=\"' + lang + '\">' + shortDesc + '</desc>\n'
                     if season and episode:
-                        programme += "\t\t<episode-num system=\"xmltv_ns\">" + season +  "." + episode + ".</episode-num>\n"
+                        programme += "\t<episode-num system=\"xmltv_ns\">" + season +  "." + episode + ".</episode-num>\n"
                     if releaseYear:
-                        programme += '\t\t<date>' + releaseYear + '</date>\n'
-                    programme += "\t</programme>\n"
+                        programme += '\t<date>' + releaseYear + '</date>\n'
+                    programme += "</programme>\n"
 
-                    all_programmes.append(programme)
+                    #all_programmes.append(programme)
+
+                    if id in zap_channels:
+                        selected_programmes.append(programme)
 
             count += 1
             gridtime = gridtime + 10800
 
-    log(all_programmes)
+    #log(all_programmes)
+    #log(selected_channels)
 
-    return
+    #return
 
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/xmltv.xml",'w')
-    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    f.write('<tv generator-info-name="WebGrab+Plus/w MDB &amp; REX Postprocess -- version V2.1.4 -- Jan van Straaten" generator-info-url="http://forums.openpli.org">')
-    f.write('\n'.join(selected_channels))
+    f.write('<?xml version="1.0" encoding="UTF-8"?>\n\n')
+    f.write('<tv generator-info-name="WebGrab+Plus/w MDB &amp; REX Postprocess -- version V2.1.4 -- Jan van Straaten" generator-info-url="http://forums.openpli.org">\n\n')
+    f.write('\n'.join(set(selected_channels)).encode("utf8"))
     f.write('\n')
-    f.write('\n'.join(selected_programmes))
+    f.write('\n'.join(selected_programmes).encode("utf8"))
     f.write('\n')
     f.write('</tv>\n')
     f.close()
@@ -215,8 +235,8 @@ def update():
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
 
-    all_channels = []
-    all_programmes = []
+    #all_channels = []
+    #all_programmes = []
     streams = []
     selected_channels = []
     selected_programmes = []
@@ -245,8 +265,8 @@ def update():
         xchannels = re.findall('(<channel.*?</channel>)', data, flags=(re.I|re.DOTALL))
         xprogrammes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
 
-        all_channels = all_channels + xchannels
-        all_programmes = all_programmes + xprogrammes
+        #all_channels = all_channels + xchannels
+        #all_programmes = all_programmes + xprogrammes
 
         for channel in xchannels:
             id = re.search('id="(.*?)"', channel)
