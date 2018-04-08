@@ -222,7 +222,7 @@ def update():
 
         group = xmltv[url]
 
-        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
+        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
         xbmcvfs.copy(url,filename)
         if filename.endswith('.xz'):
             f = open(filename+".xml","w")
@@ -305,6 +305,17 @@ def delete_xmltv(url):
     xmltv = plugin.get_storage('xmltv')
     del xmltv[url]
 
+@plugin.route('/add_custom_xmltv/<name>/<url>')
+def add_custom_xmltv(name,url):
+    xmltv = plugin.get_storage('custom_xmltv')
+    xmltv[url] = name
+
+
+@plugin.route('/delete_custom_xmltv/<url>')
+def delete_custom_xmltv(url):
+    xmltv = plugin.get_storage('custom_xmltv')
+    del xmltv[url]
+
 
 @plugin.route('/add_channel/<name>/<id>')
 def add_channel(name,id):
@@ -354,7 +365,7 @@ def add_zap_channel(name,id):
 
 @plugin.route('/select_channels/<url>')
 def select_channels(url):
-    filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
+    filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
     xbmcvfs.copy(url,filename)
 
     if filename.endswith('.xz'):
@@ -378,7 +389,7 @@ def select_channels(url):
     match = re.findall('<channel(.*?)</channel>', data, flags=(re.I|re.DOTALL))
     if match:
 
-        for m in sorted(match):
+        for m in match:
             id = re.search('id="(.*?)"', m)
             if id:
                 id = htmlparser.unescape(id.group(1))
@@ -407,8 +418,55 @@ def select_channels(url):
                 'context_menu': context_items,
             })
 
-    return items
+    return sorted(items, key = lambda x: remove_formatting(x['label']))
 
+
+@plugin.route('/add_custom_xmltv_dialog')
+def add_custom_xmltv_dialog():
+    url = xbmcgui.Dialog().input("xmltv Meld: xmltv url?")
+    if url:
+        name = xbmcgui.Dialog().input("xmltv Meld: xmltv Name?")
+        if name:
+            add_custom_xmltv(name,url)
+
+
+@plugin.route('/custom_xmltv')
+def custom_xmltv():
+
+    custom = plugin.get_storage('custom_xmltv')
+
+    items = []
+    context_items = []
+    items.append(
+    {
+        'label': "New",
+        'path': plugin.url_for('add_custom_xmltv_dialog'),
+        'thumbnail':get_icon_path('settings'),
+        'context_menu': context_items,
+    })
+
+    xmltv = plugin.get_storage('xmltv')
+    for url in sorted(custom,key=lambda x: custom[x]):
+        name = custom[url]
+
+        context_items = []
+        if url not in xmltv:
+            context_items.append(("Add xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=name, url=url))))
+            label = name
+        else:
+            context_items.append(("Remove xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
+            label = "[COLOR yellow]%s[/COLOR]" % name
+        context_items.append(("Remove xmltv url", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_custom_xmltv, url=url))))
+
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('select_channels',url=url),
+            'thumbnail':get_icon_path('tv'),
+            'context_menu': context_items,
+        })
+
+    return items
 
 @plugin.route('/rytec_xmltv')
 def rytec_xmltv():
@@ -604,6 +662,13 @@ def zap_country(country):
 @plugin.route('/')
 def index():
     items = []
+
+    items.append(
+    {
+        'label': "Custom",
+        'path': plugin.url_for('custom_xmltv'),
+        'thumbnail':get_icon_path('tv'),
+    })
 
     items.append(
     {
