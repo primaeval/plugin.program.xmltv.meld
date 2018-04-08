@@ -124,9 +124,9 @@ def convTime(t):
 @plugin.route('/update_zap')
 def update_zap():
     zaps = plugin.get_storage('zaps')
-    log(zaps.keys())
+    #log(zaps.keys())
     zap_channels = plugin.get_storage('zap_channels')
-    log(zap_channels.keys())
+    #log(zap_channels.keys())
 
     #all_channels = []
     #all_programmes = []
@@ -140,14 +140,16 @@ def update_zap():
         #log((url,name))
 
         count = 0
+        days = 2
         gridtime = gridtimeStart
-        while count < 2:
+        while count < 8*days:
             u = url + '&time=' + str(gridtime)
             #log(u)
             data = xbmcvfs.File(u,'r').read()
             #log(data)
             j = json.loads(data)
             channels = j.get('channels')
+
             for channel in channels:
                 callSign = channel.get('callSign')
                 id = channel.get('id') #channelId
@@ -163,7 +165,6 @@ def update_zap():
                     xchannel += '\t<icon src="' + thumbnail + '"/>\n'
                 xchannel += '</channel>\n'
 
-                #log(id)
                 if id in zap_channels:
                     selected_channels.append(xchannel)
                     streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (callSign,id,thumbnail,name,callSign,'http://localhost'))
@@ -198,18 +199,11 @@ def update_zap():
                         programme += '\t<date>' + releaseYear + '</date>\n'
                     programme += "</programme>\n"
 
-                    #all_programmes.append(programme)
-
                     if id in zap_channels:
                         selected_programmes.append(programme)
 
             count += 1
             gridtime = gridtime + 10800
-
-    #log(all_programmes)
-    #log(selected_channels)
-
-    #return
 
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/xmltv.xml",'w')
