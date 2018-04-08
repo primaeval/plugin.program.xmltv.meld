@@ -166,6 +166,7 @@ def update_zap():
                 #log(id)
                 if id in zap_channels:
                     selected_channels.append(xchannel)
+                    streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (callSign,id,thumbnail,name,callSign,'http://localhost'))
 
                 events = channel.get('events')
                 for event in events:
@@ -223,7 +224,7 @@ def update_zap():
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/channels.m3u8",'w')
     f.write('#EXTM3U\n\n')
-    f.write('\n'.join(streams).encode("utf8"))
+    f.write('\n'.join(sorted(set(streams))).encode("utf8"))
     f.write('\n')
     f.close()
 
