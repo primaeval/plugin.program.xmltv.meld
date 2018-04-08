@@ -3,7 +3,7 @@
 ## plugin.program.xmltv.meld
 
 * Joins xmltv providers into one xmltv file.
-* Current source are from rytec, zap, koditvepg.
+* Current sources are from rytec, zap, koditvepg.
 
 # Quick Start
 * Download busybox for your device. 
