@@ -222,7 +222,7 @@ def update():
 
         group = xmltv[url]
 
-        filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
+        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
         xbmcvfs.copy(url,filename)
         if filename.endswith('.xz'):
             f = open(filename+".xml","w")
@@ -269,7 +269,7 @@ def update():
     selected_channels = selected_channels +zap_channels
     selected_programmes = selected_programmes + zap_programmes
 
-    f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/xmltv.xml",'w')
+    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
     f.write('\n\n'.join(selected_channels).encode("utf8"))
@@ -279,7 +279,7 @@ def update():
     f.write('</tv>\n')
     f.close()
 
-    f = xbmcvfs.File("special://profile/addon_data/plugin.video.xmltv.meld/channels.m3u8",'w')
+    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/channels.m3u8",'w')
     f.write('#EXTM3U\n\n')
     f.write('\n'.join(streams).encode("utf8"))
     f.write('\n')
@@ -354,7 +354,7 @@ def add_zap_channel(name,id):
 
 @plugin.route('/select_channels/<url>')
 def select_channels(url):
-    filename = xbmc.translatePath("special://profile/addon_data/plugin.video.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
+    filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('/',1)[-1])
     xbmcvfs.copy(url,filename)
 
     if filename.endswith('.xz'):

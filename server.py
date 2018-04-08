@@ -12,19 +12,19 @@ def Service():
         return
     servicing = True
     xbmc.log("SERVICE")
-    xbmc.executebuiltin('XBMC.RunPlugin(plugin://plugin.video.xmltv.meld/update)')
+    xbmc.executebuiltin('XBMC.RunPlugin(plugin://plugin.program.xmltv.meld/update)')
     time.sleep(2)
     servicing = False
 
 
 if __name__ == '__main__':
 
-    ADDON = xbmcaddon.Addon('plugin.video.xmltv.meld')
+    ADDON = xbmcaddon.Addon('plugin.program.xmltv.meld')
 
     try:
         if ADDON.getSetting('service') == 'true':
             monitor = xbmc.Monitor()
-            xbmc.log("[plugin.video.xmltv.meld] service started...", xbmc.LOGDEBUG)
+            xbmc.log("[plugin.program.xmltv.meld] service started...", xbmc.LOGDEBUG)
             if ADDON.getSetting('service.startup') == 'true':
                 Service()
                 ADDON.setSetting('last.update', str(time.time()))
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                     nextTime = lastTime + datetime.timedelta(seconds=waitTime)
                     td = nextTime - now
                     timeLeft = td.seconds + (td.days * 24 * 3600)
-                    xbmc.log("[plugin.video.xmltv.meld] Service waiting for interval %s" % waitTime, xbmc.LOGDEBUG)
+                    xbmc.log("[plugin.program.xmltv.meld] Service waiting for interval %s" % waitTime, xbmc.LOGDEBUG)
                 elif ADDON.getSetting('service.type') == '2':
                     next_time = ADDON.getSetting('service.time')
                     if next_time:
@@ -51,10 +51,10 @@ if __name__ == '__main__':
                         timeLeft = td.seconds + (td.days * 24 * 3600)
                 if timeLeft <= 0:
                     timeLeft = 1
-                xbmc.log("[plugin.video.xmltv.meld] Service waiting for %d seconds" % timeLeft, xbmc.LOGDEBUG)
+                xbmc.log("[plugin.program.xmltv.meld] Service waiting for %d seconds" % timeLeft, xbmc.LOGDEBUG)
                 if timeLeft and monitor.waitForAbort(timeLeft):
                     break
-                xbmc.log("[plugin.video.xmltv.meld] Service now triggered...", xbmc.LOGDEBUG)
+                xbmc.log("[plugin.program.xmltv.meld] Service now triggered...", xbmc.LOGDEBUG)
                 Service()
                 now = time.time()
                 ADDON.setSetting('last.update', str(now))
