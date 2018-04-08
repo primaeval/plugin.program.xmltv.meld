@@ -539,7 +539,39 @@ def zap_country(country):
 
     items = []
 
-    for provider in providers:
+    if country == "USA":
+        lineupsN = ['TIMEZONE - Eastern', 'TIMEZONE - Central', 'TIMEZONE - Mountain', 'TIMEZONE - Pacific', 'TIMEZONE - Alaskan', 'TIMEZONE - Hawaiian']
+        lineupsC = ['DFLTE', 'DFLTC', 'DFLTM', 'DFLTP', 'DFLTA', 'DFLTH']
+    else:
+        lineupsN = ['TIMEZONE - Eastern', 'TIMEZONE - Central', 'TIMEZONE - Mountain', 'TIMEZONE - Pacific']
+        lineupsC = ['DFLTEC', 'DFLTCC', 'DFLTMC', 'DFLTPC']
+
+    for name,lineup in zip(lineupsN,lineupsC):
+
+        device = '-'
+        headend = lineup
+
+        #label = "%s / %s / %s / %s" % (name,device,lineup,headend)
+        label = name
+
+        url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode  + '&pref=-&userId=-'
+
+        context_items = []
+        if url not in zaps:
+            context_items.append(("Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
+            label = label
+        else:
+            context_items.append(("Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
+            label = "[COLOR yellow]%s[/COLOR]" % label
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'thumbnail':get_icon_path('tv'),
+            'context_menu': context_items,
+        })
+
+    for provider in sorted(providers, key=lambda x: x['name']):
 
         name = provider.get('name')
         device = provider.get('device') or '-'
@@ -566,7 +598,7 @@ def zap_country(country):
             'context_menu': context_items,
         })
 
-    return sorted(items, key=lambda x: remove_formatting(x["label"]))
+    return items
 
 
 @plugin.route('/')
