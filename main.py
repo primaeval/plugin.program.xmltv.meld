@@ -140,9 +140,9 @@ def update_zap():
         #log((url,name))
 
         count = 0
-        days = 2
+
         gridtime = gridtimeStart
-        while count < 8*days:
+        while count < (8 * int(plugin.get_setting('zap.days') or "1")):
             u = url + '&time=' + str(gridtime)
             #log(u)
             data = xbmcvfs.File(u,'r').read()
@@ -160,7 +160,7 @@ def update_zap():
                 thumbnail = "http:" + channel.get('thumbnail').replace('?w=55','')
 
                 xchannel = '<channel id="' + id + '">\n'
-                xchannel += '\t<display-name>' + callSign + '</display-name>\n'
+                xchannel += '\t<display-name>' + escape(callSign) + '</display-name>\n'
                 if thumbnail:
                     xchannel += '\t<icon src="' + thumbnail + '"/>\n'
                 xchannel += '</channel>\n'
@@ -185,14 +185,13 @@ def update_zap():
                     season = program.get('season')
                     episode = program.get('episode')
 
-                    lang = "en"
                     programme = '<programme start=\"' + startTime + '\" stop=\"' + endTime + '\" channel=\"' + id  + '\">\n'
                     if title:
-                        programme += '\t<title lang=\"' + lang + '\">' + title + '</title>\n'
+                        programme += '\t<title>' + escape(title) + '</title>\n'
                     if episodeTitle:
-                        programme += '\t<sub-title lang=\"'+ lang + '\">' + episodeTitle + '</sub-title>\n'
+                        programme += '\t<sub-title>' + escape(episodeTitle) + '</sub-title>\n'
                     if shortDesc:
-                        programme += '\t<desc lang=\"' + lang + '\">' + shortDesc + '</desc>\n'
+                        programme += '\t<desc>' + escape(shortDesc) + '</desc>\n'
                     if season and episode:
                         programme += "\t<episode-num system=\"xmltv_ns\">" + season +  "." + episode + ".</episode-num>\n"
                     if releaseYear:
@@ -529,10 +528,29 @@ def select_zap_channels(country, zipcode, device, lineup, headend):
 
 @plugin.route('/zap')
 def zap():
+    items = []
+
+    for label, country in [("Canada","CAN"), ("USA","USA")]:
+
+        context_items = []
+
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('zap_country',country=country),
+            'thumbnail':get_icon_path('settings'),
+            'context_menu': context_items,
+        })
+
+    return items
+
+
+@plugin.route('/zap_country/<country>')
+def zap_country(country):
     zaps = plugin.get_storage('zaps')
 
-    country = "USA"
-    zipcode = "10001"
+    #country = "USA"
+    zipcode = plugin.get_setting('zap.' + country.lower() + '.zipcode')
     url = 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/' + country + '/' + zipcode + '/gapzap'
 
     sources = xbmcvfs.File(url,"r").read()

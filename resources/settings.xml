@@ -1,11 +1,18 @@
 <settings>
-<category label="Service">
+<category label="Data">
 <setting id="busybox" label="busybox exe" type="file" default=""/>
 
+<setting id="zap.days" label="Zap Days" type="number" default="1"/>
+<setting id="zap.usa.zipcode" label="Zap USA Zipcode" type="text" default="90210"/>
+<setting id="zap.can.zipcode" label="Zap Canada Zipcode" type="text" default="M5V2T6"/>
+</category>
+
+<category label="Service">
 <setting id="service" label="Service" type="bool" default="false" />
 <setting id="service.startup" label="Update on Login" type="bool" default="true" visible="eq(-1,true)"/>
 <setting id="service.type" label="Service Schedule Type" type="enum" default="Time" visible="eq(-2,true)" values="None|Period|Time" />
 <setting id="service.interval" label="Interval" type="number" default="24"  visible="eq(-3,true)+eq(-1,1)" />
 <setting id="service.time" type="time" label="Service Time" default="03:33" visible="eq(-4,true)+eq(-2,2)"/>
 </category>
+
 </settings>
