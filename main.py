@@ -433,7 +433,7 @@ def rytec_xmltv():
         {
             'label': label,
             'path': plugin.url_for('select_channels',url=url),
-            'thumbnail':get_icon_path('settings'),
+            'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
 
@@ -461,7 +461,7 @@ def koditvepg_xmltv():
         {
             'label': label,
             'path': plugin.url_for('select_channels',url=url),
-            'thumbnail':get_icon_path('settings'),
+            'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
 
@@ -517,7 +517,7 @@ def zap():
         {
             'label': label,
             'path': plugin.url_for('zap_country',country=country),
-            'thumbnail':get_icon_path('settings'),
+            'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
 
