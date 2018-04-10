@@ -242,6 +242,7 @@ def update():
             data = xbmcvfs.File(filename[:-3],'r').read()
         else:
             data = xbmcvfs.File(filename,'r').read()
+        data = data.decode("utf8")
 
         xchannels = re.findall('(<channel.*?</channel>)', data, flags=(re.I|re.DOTALL))
         xprogrammes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
@@ -278,16 +279,16 @@ def update():
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
-    f.write('\n\n'.join(selected_channels).decode("utf8").encode("utf8"))
+    f.write('\n\n'.join(selected_channels).encode("utf8"))
     f.write('\n\n\n')
-    f.write('\n\n'.join(selected_programmes).decode("utf8").encode("utf8"))
+    f.write('\n\n'.join(selected_programmes).encode("utf8"))
     f.write('\n')
     f.write('</tv>\n')
     f.close()
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/channels.m3u8",'w')
     f.write('#EXTM3U\n\n')
-    f.write('\n'.join(streams).decode("utf8").encode("utf8"))
+    f.write('\n'.join(streams).encode("utf8"))
     f.write('\n')
     f.close()
 
@@ -397,7 +398,7 @@ def select_channels(url):
     items = []
     channels = plugin.get_storage('channels')
 
-    match = re.findall('<channel(.*?)</channel>', data, flags=(re.I|re.DOTALL))
+    match = re.findall('<channel(.*?)</channel>', data.decode("utf8"), flags=(re.I|re.DOTALL))
     if match:
 
         for m in match:
