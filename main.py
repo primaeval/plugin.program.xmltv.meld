@@ -310,7 +310,8 @@ def add_xmltv(name,url):
 @plugin.route('/delete_xmltv/<url>')
 def delete_xmltv(url):
     xmltv = plugin.get_storage('xmltv')
-    del xmltv[url]
+    if url in xmltv:
+        del xmltv[url]
 
 @plugin.route('/add_custom_xmltv/<name>/<url>')
 def add_custom_xmltv(name,url):
@@ -321,7 +322,8 @@ def add_custom_xmltv(name,url):
 @plugin.route('/delete_custom_xmltv/<url>')
 def delete_custom_xmltv(url):
     xmltv = plugin.get_storage('custom_xmltv')
-    del xmltv[url]
+    if url in xmltv:
+        del xmltv[url]
 
 
 @plugin.route('/add_channel/<name>/<id>')
@@ -338,7 +340,8 @@ def delete_channel(id):
     id = id.decode("utf8")
 
     channels = plugin.get_storage('channels')
-    del channels[id]
+    if id in channels:
+        del channels[id]
 
 
 @plugin.route('/add_zap/<name>/<url>')
@@ -350,14 +353,16 @@ def add_zap(name,url):
 @plugin.route('/delete_zap/<url>')
 def delete_zap(url):
     zaps = plugin.get_storage('zaps')
-    del zaps[url]
+    if url in zaps:
+        del zaps[url]
 
 @plugin.route('/delete_zap_channel/<id>')
 def delete_zap_channel(id):
     id = id.decode("utf8")
 
     channels = plugin.get_storage('zap_channels')
-    del channels[id]
+    if id in channels:
+        del channels[id]
 
 @plugin.route('/add_zap_channel/<name>/<id>')
 def add_zap_channel(name,id):
@@ -415,7 +420,8 @@ def select_channels(url):
                 icon = icon.group(1)
 
             context_items = []
-            context_items.append(("Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
 
             if id in channels:
                 label = "[COLOR yellow]%s[/COLOR]" % name
@@ -471,12 +477,12 @@ def custom_xmltv():
 
         context_items = []
         if url not in xmltv:
-            context_items.append(("Add xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=name, url=url))))
+            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=name, url=url))))
             label = name
         else:
-            context_items.append(("Remove xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
+            context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % name
-        context_items.append(("Remove xmltv url", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_custom_xmltv, url=url))))
+        context_items.append(("[COLOR yellow]Remove xmltv url[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_custom_xmltv, url=url))))
 
         items.append(
         {
@@ -501,10 +507,10 @@ def rytec_xmltv():
 
         context_items = []
         if url not in xmltv:
-            context_items.append(("Add xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
+            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
             label = description
         else:
-            context_items.append(("Remove xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
+            context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % description
 
         items.append(
@@ -529,10 +535,10 @@ def koditvepg_xmltv():
 
         context_items = []
         if url not in xmltv:
-            context_items.append(("Add xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
+            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
             label = description
         else:
-            context_items.append(("Remove xmltv", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
+            context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % description
 
         items.append(
@@ -565,7 +571,7 @@ def select_zap_channels(country, zipcode, device, lineup, headend):
         icon = "http:" + channel.get('thumbnail').replace('?w=55','')
 
         context_items = []
-        context_items.append(("Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+        context_items.append(("[COLOR yellow]Remove channel[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
 
         if id in zap_channels:
             label = "[COLOR yellow]%s[/COLOR]" % name
@@ -636,15 +642,15 @@ def zap_country(country):
 
         context_items = []
         if url not in zaps:
-            context_items.append(("Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
             label = label
         else:
-            context_items.append(("Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % label
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'path': plugin.url_for("[COLOR yellow]%s[/COLOR]" %'select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
@@ -663,15 +669,15 @@ def zap_country(country):
 
         context_items = []
         if url not in zaps:
-            context_items.append(("Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
             label = label
         else:
-            context_items.append(("Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % label
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'path': plugin.url_for("[COLOR yellow]%s[/COLOR]" %'select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
