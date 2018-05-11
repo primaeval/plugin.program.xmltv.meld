@@ -650,7 +650,7 @@ def zap_country(country):
         items.append(
         {
             'label': label,
-            'path': plugin.url_for("[COLOR yellow]%s[/COLOR]" %'select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
@@ -677,7 +677,7 @@ def zap_country(country):
         items.append(
         {
             'label': label,
-            'path': plugin.url_for("[COLOR yellow]%s[/COLOR]" %'select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
