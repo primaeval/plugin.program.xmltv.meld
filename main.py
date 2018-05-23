@@ -373,10 +373,17 @@ def add_zap_channel(name,id):
     channels[id] = name
 
 
+@plugin.route('/add_all_channels/<url>')
+def add_all_channels(url):
+    select_channels(url,add_all=True)
+
+@plugin.route('/delete_all_channels/<url>')
+def delete_all_channels(url):
+    select_channels(url,remove_all=True)
 
 
 @plugin.route('/select_channels/<url>')
-def select_channels(url):
+def select_channels(url, add_all=False, remove_all=False):
     if '\\' in url:
         url = url.replace('\\','/')
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
@@ -419,9 +426,16 @@ def select_channels(url):
             if icon:
                 icon = icon.group(1)
 
+            if add_all == True:
+                add_channel(name.encode("utf8"), id.encode("utf8"))
+            if remove_all == True:
+                delete_channel(id.encode("utf8"))
+
             context_items = []
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
 
             if id in channels:
                 label = "[COLOR yellow]%s[/COLOR]" % name
@@ -483,6 +497,8 @@ def custom_xmltv():
             context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % name
         context_items.append(("[COLOR yellow]Remove xmltv url[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_custom_xmltv, url=url))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
 
         items.append(
         {
@@ -512,6 +528,8 @@ def rytec_xmltv():
         else:
             context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % description
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
 
         items.append(
         {
@@ -540,6 +558,8 @@ def koditvepg_xmltv():
         else:
             context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % description
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
 
         items.append(
         {
@@ -552,8 +572,18 @@ def koditvepg_xmltv():
     return sorted(items, key = lambda x: remove_formatting(x["label"]))
 
 
+@plugin.route('/add_all_zap_channels/<country>/<zipcode>/<device>/<lineup>/<headend>')
+def add_all_zap_channels(country, zipcode, device, lineup, headend):
+    select_zap_channels(country, zipcode, device, lineup, headend, add_all=True)
+
+
+@plugin.route('/delete_all_zap_channels/<country>/<zipcode>/<device>/<lineup>/<headend>')
+def delete_all_zap_channels(country, zipcode, device, lineup, headend):
+    select_zap_channels(country, zipcode, device, lineup, headend, remove_all=True)
+
+
 @plugin.route('/select_zap_channels/<country>/<zipcode>/<device>/<lineup>/<headend>')
-def select_zap_channels(country, zipcode, device, lineup, headend):
+def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False, remove_all=False):
     gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
 
     url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
@@ -570,8 +600,15 @@ def select_zap_channels(country, zipcode, device, lineup, headend):
         id = channel.get('id')
         icon = "http:" + channel.get('thumbnail').replace('?w=55','')
 
+        if add_all == True:
+            add_zap_channel(name.encode("utf8"), id.encode("utf8"))
+        if remove_all == True:
+            delete_zap_channel(id.encode("utf8"))
+
         context_items = []
         context_items.append(("[COLOR yellow]Remove channel[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_zap_channels',country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_zap_channels, country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
 
         if id in zap_channels:
             label = "[COLOR yellow]%s[/COLOR]" % name
@@ -647,10 +684,13 @@ def zap_country(country):
         else:
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % label
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_zap_channels',country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_zap_channels, country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
+
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'path': plugin.url_for('select_zap_channels',country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
@@ -677,7 +717,7 @@ def zap_country(country):
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('select_zap_channels',country="USA", zipcode=zipcode, device=device, lineup=lineup, headend=headend),
+            'path': plugin.url_for('select_zap_channels',country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
