@@ -293,7 +293,9 @@ def update():
         channel_order = []
     xmltv_channels = []
     for id in channel_order:
-        xmltv_channels.append(selected_channels[id])
+        channel_data = selected_channels.get(id)
+        if channel_data:
+            xmltv_channels.append(channel_data)
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
