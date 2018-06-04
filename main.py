@@ -126,6 +126,7 @@ def reset():
     zap_channels = plugin.get_storage('zap_channels')
     zap_channels.clear()
 
+    xbmcvfs.delete(profile()+'id_order.json')
 
 
 @plugin.route('/update_zap')
@@ -347,8 +348,11 @@ def create_json_channels():
     path = profile()+'id_order.json'
     if not xbmcvfs.exists(path):
         channels = plugin.get_storage('channels')
+        zap_channels = plugin.get_storage('zap_channels')
+        all_channels = dict(channels.items())
+        all_channels.update(dict(zap_channels.items()))
         f = xbmcvfs.File(path,'w')
-        f.write(json.dumps(sorted(channels.keys()),indent=0))
+        f.write(json.dumps(sorted(all_channels.keys()),indent=0))
         f.close()
 
 
@@ -832,6 +836,10 @@ def sort_channels():
 @plugin.route('/move_channel/<id>')
 def move_channel(id):
     channels = plugin.get_storage('channels')
+    zap_channels = plugin.get_storage('zap_channels')
+
+    all_channels = dict(channels.items())
+    all_channels.update(dict(zap_channels.items()))
 
     path = profile()+'id_order.json'
     if xbmcvfs.exists(path):
@@ -845,11 +853,11 @@ def move_channel(id):
     else:
         order = []
 
-    sorted_channels_names = [channels[x] for x in order]
+    sorted_channels_names = [all_channels[x] for x in order]
 
     dialog = xbmcgui.Dialog()
 
-    index = dialog.select('%s: Move After?' % channels[id], sorted_channels_names)
+    index = dialog.select('%s: Move After?' % all_channels[id], sorted_channels_names)
     if index == -1:
         return
 
@@ -865,6 +873,11 @@ def move_channel(id):
 @plugin.route('/channels')
 def channels():
     channels = plugin.get_storage('channels')
+    zap_channels = plugin.get_storage('zap_channels')
+
+    all_channels = dict(channels.items())
+    all_channels.update(dict(zap_channels.items()))
+
     icons = plugin.get_storage('icons')
 
     path = profile()+'id_order.json'
@@ -881,7 +894,9 @@ def channels():
 
     items = []
     for id in order:
-        name = channels[id]
+        name = all_channels.get(id)
+        if not name:
+            continue
         items.append(
         {
             'label': name,
