@@ -723,6 +723,128 @@ def zap_country(country):
         })
 
     return items
+    
+@plugin.route('/rename_id/<id>')
+def rename_id(id):
+    channels = plugin.get_storage('channels')
+    channel = channels[id]
+    (country,name,site,site_id,xmltv_id) = id.split("|")
+    dialog = xbmcgui.Dialog()
+    xmltv_id = dialog.input('New xmltv id', xmltv_id, type=xbmcgui.INPUT_ALPHANUM)
+    if xmltv_id:
+        del(channels[id])
+        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
+        channels[id] = channel
+        xbmc.executebuiltin('Container.Refresh')
+
+@plugin.route('/rename_channel/<id>')
+def rename_channel(id):
+    channels = plugin.get_storage('channels')
+    channel = channels[id]
+    (country,name,site,site_id,xmltv_id) = id.split("|")
+    dialog = xbmcgui.Dialog()
+    name = dialog.input('New Channel Name', name, type=xbmcgui.INPUT_ALPHANUM)
+    if name:
+        del(channels[id])
+        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
+        channels[id] = channel
+        xbmc.executebuiltin('Container.Refresh')
+
+@plugin.route('/sort_channels')
+def sort_channels():
+    dialog = xbmcgui.Dialog()
+    how = ['Country','Name','Provider','site id','xmltv id']
+    index = dialog.select('New xmltv id', how)
+    if index == -1:
+        return
+    channels = plugin.get_storage('channels')
+    channel_list = []
+    for c in channels:
+        order = channels[c]
+        (country,name,site,site_id,xmltv_id) = c.split("|")
+        channel_list.append((country,name,site,site_id,xmltv_id,order))
+    second_index = 1
+    if index == 1:
+        second_index = 0
+    sorted_channels = sorted(channel_list, key=lambda c: (c[index],c[second_index]))
+    i = 0
+    for (country,name,site,site_id,xmltv_id,order) in sorted_channels:
+        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
+        channels[id] = i
+        i = i + 1
+    xbmc.executebuiltin('Container.Refresh')
+
+@plugin.route('/move_channel/<id>')
+def move_channel(id):
+    channels = plugin.get_storage('channels')
+    channel_list = []
+    for c in channels:
+        order = channels[c]
+        (country,name,site,site_id,xmltv_id) = c.split("|")
+        channel_list.append((country,name,site,site_id,xmltv_id,order))
+    sorted_channels = sorted(channel_list, key=lambda c: c[5])
+    sorted_channels_names = ["%s - [COLOR yellow]%s[/COLOR] - %s (%s) [%s]" % (c[0],c[1],c[2],c[3],c[4]) for c in sorted_channels]
+    length = len(sorted_channels_names)
+    dialog = xbmcgui.Dialog()
+
+    index = dialog.select('Move Before?', sorted_channels_names)
+    if index == -1:
+        return
+
+    this_channel = channels[id]
+    order = channels[id]
+    (country,name,site,site_id,xmltv_id) = id.split("|")
+    oldindex = sorted_channels.index((country,name,site,site_id,xmltv_id,order))
+    if oldindex < index:
+        index = index - 1
+    sorted_channels.insert(index, sorted_channels.pop(oldindex))
+    channels.clear()
+
+    i = 0
+    for (country,name,site,site_id,xmltv_id,order) in sorted_channels:
+        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
+        channels[id] = i
+        i = i + 1
+
+    xbmc.executebuiltin('Container.Refresh')
+
+@plugin.route('/channels')
+def channels():
+    channels = plugin.get_storage('channels')
+    #hidden_channels = plugin.get_storage('hidden_channels')
+    items = []
+    for id, name in channels.iteritems():
+        items.append(
+        {
+            'label': name,
+            'path': plugin.url_for('move_channel',id=id),
+            #'thumbnail':get_icon_path('settings'),
+            #'context_menu': context_items,
+        })    
+        
+    '''
+    sorted_ids = sorted(channels.items(), key=operator.itemgetter(1))
+    for (id,order) in sorted_ids:
+        #(country,name,site,site_id,xmltv_id) = id.split("|")
+        #if id in hidden_channels:
+        #    label = "%s - [COLOR grey]%s[/COLOR] - %s (%s) [%s]" % (country,name,site,site_id,xmltv_id)
+        #else:
+        #    label = "%s - [COLOR yellow]%s[/COLOR] - %s (%s) [%s]" % (country,name,site,site_id,xmltv_id)
+        context_items = []
+        context_items.append(('Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
+        context_items.append(('Move Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for('move_channel', id=id))))
+        #context_items.append(('Rename Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for('rename_channel', id=id))))
+        #context_items.append(('Rename xmltv id', 'XBMC.RunPlugin(%s)' % (plugin.url_for('rename_id', id=id))))
+        #context_items.append(('Delete Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for('toggle',country=country,site=site,site_id=site_id,xmltv_id=xmltv_id,name=name))))
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('toggle_hide',country=country,site=site,site_id=site_id,xmltv_id=xmltv_id,name=name),
+            'thumbnail':get_icon_path('settings'),
+            'context_menu': context_items,
+        })
+    '''
+    return items    
 
 
 @plugin.route('/')
@@ -756,6 +878,13 @@ def index():
         'path': plugin.url_for('zap'),
         'thumbnail':get_icon_path('tv'),
     })
+    
+    items.append(
+    {
+        'label': 'Selected Channels',
+        'path': plugin.url_for('channels'),
+        'thumbnail':get_icon_path('settings'),
+    })    
 
     items.append(
     {
