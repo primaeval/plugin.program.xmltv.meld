@@ -29,6 +29,9 @@ def log(v):
 
 #log(sys.argv)
 
+def profile():
+    return xbmcaddon.Addon().getAddonInfo('profile')
+
 def get_icon_path(icon_name):
     if plugin.get_setting('user.icons') == "true":
         user_icon = "special://profile/addon_data/%s/icons/%s.png" % (addon_id(),icon_name)
@@ -132,7 +135,7 @@ def update_zap():
     zap_channels = plugin.get_storage('zap_channels')
 
     streams = []
-    selected_channels = []
+    selected_channels = {}
     selected_programmes = []
 
     gridtimeStart = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
@@ -164,7 +167,7 @@ def update_zap():
                 xchannel += '</channel>'
 
                 if id in zap_channels:
-                    selected_channels.append(xchannel)
+                    selected_channels[id] = xchannel
                     streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (callSign,id,thumbnail,name,callSign,'http://localhost'))
 
                 events = channel.get('events')
@@ -213,7 +216,7 @@ def update():
     channels = plugin.get_storage('channels')
 
     streams = []
-    selected_channels = []
+    selected_channels = {}
     selected_programmes = []
 
     htmlparser = HTMLParser()
@@ -261,7 +264,7 @@ def update():
                 icon = icon.group(1)
 
             if id in channels:
-                selected_channels.append(channel)
+                selected_channels[id] = channel
                 streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,id,icon,group,name,'http://localhost'))
 
         for programme in xprogrammes:
@@ -273,13 +276,28 @@ def update():
                     selected_programmes.append(programme)
 
     zap_channels, zap_programmes = update_zap()
-    selected_channels = selected_channels +zap_channels
+    selected_channels.update(zap_channels)
     selected_programmes = selected_programmes + zap_programmes
+
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            channel_order = json.loads(data)
+        else:
+            channel_order = []
+        f.close()
+    else:
+        channel_order = []
+    xmltv_channels = []
+    for id in channel_order:
+        xmltv_channels.append(selected_channels[id])
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
-    f.write('\n\n'.join(selected_channels).encode("utf8"))
+    f.write('\n\n'.join(xmltv_channels).encode("utf8"))
     f.write('\n\n\n')
     f.write('\n\n'.join(selected_programmes).encode("utf8"))
     f.write('\n')
@@ -325,6 +343,50 @@ def delete_custom_xmltv(url):
     if url in xmltv:
         del xmltv[url]
 
+def create_json_channels():
+    path = profile()+'id_order.json'
+    if not xbmcvfs.exists(path):
+        channels = plugin.get_storage('channels')
+        f = xbmcvfs.File(path,'w')
+        f.write(json.dumps(sorted(channels.keys()),indent=0))
+        f.close()
+
+
+def add_json_channel(id):
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            channels = json.loads(data)
+        else:
+            channels = []
+        f.close()
+    else:
+        channels = []
+    if id not in channels:
+        channels.append(id)
+    f = xbmcvfs.File(path,'w')
+    f.write(json.dumps(channels,indent=0))
+
+
+def delete_json_channel(id):
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            channels = json.loads(data)
+        else:
+            channels = []
+        f.close()
+    else:
+        channels = []
+    if id in channels:
+        channels.remove(id)
+    f = xbmcvfs.File(path,'w')
+    f.write(json.dumps(channels,indent=0))
+
 
 @plugin.route('/add_channel/<name>/<id>')
 def add_channel(name,id):
@@ -334,6 +396,8 @@ def add_channel(name,id):
     channels = plugin.get_storage('channels')
     channels[id] = name
 
+    add_json_channel(id)
+
 
 @plugin.route('/delete_channel/<id>')
 def delete_channel(id):
@@ -342,6 +406,8 @@ def delete_channel(id):
     channels = plugin.get_storage('channels')
     if id in channels:
         del channels[id]
+
+    delete_json_channel(id)
 
 
 @plugin.route('/add_zap/<name>/<url>')
@@ -356,6 +422,7 @@ def delete_zap(url):
     if url in zaps:
         del zaps[url]
 
+
 @plugin.route('/delete_zap_channel/<id>')
 def delete_zap_channel(id):
     id = id.decode("utf8")
@@ -363,6 +430,9 @@ def delete_zap_channel(id):
     channels = plugin.get_storage('zap_channels')
     if id in channels:
         del channels[id]
+
+    delete_json_channel(id)
+
 
 @plugin.route('/add_zap_channel/<name>/<id>')
 def add_zap_channel(name,id):
@@ -372,10 +442,13 @@ def add_zap_channel(name,id):
     channels = plugin.get_storage('zap_channels')
     channels[id] = name
 
+    add_json_channel(id)
+
 
 @plugin.route('/add_all_channels/<url>')
 def add_all_channels(url):
     select_channels(url,add_all=True)
+
 
 @plugin.route('/delete_all_channels/<url>')
 def delete_all_channels(url):
@@ -384,6 +457,8 @@ def delete_all_channels(url):
 
 @plugin.route('/select_channels/<url>')
 def select_channels(url, add_all=False, remove_all=False):
+    icons = plugin.get_storage('icons')
+
     if '\\' in url:
         url = url.replace('\\','/')
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
@@ -441,6 +516,8 @@ def select_channels(url, add_all=False, remove_all=False):
                 label = "[COLOR yellow]%s[/COLOR]" % name
             else:
                 label = name
+
+            icons[id] = icon
 
             items.append(
             {
@@ -584,6 +661,8 @@ def delete_all_zap_channels(country, zipcode, device, lineup, headend):
 
 @plugin.route('/select_zap_channels/<country>/<zipcode>/<device>/<lineup>/<headend>')
 def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False, remove_all=False):
+    icons = plugin.get_storage('icons')
+
     gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
 
     url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
@@ -614,6 +693,8 @@ def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False
             label = "[COLOR yellow]%s[/COLOR]" % name
         else:
             label = name
+
+        icons[id] = icon
 
         items.append(
         {
@@ -723,128 +804,93 @@ def zap_country(country):
         })
 
     return items
-    
-@plugin.route('/rename_id/<id>')
-def rename_id(id):
-    channels = plugin.get_storage('channels')
-    channel = channels[id]
-    (country,name,site,site_id,xmltv_id) = id.split("|")
-    dialog = xbmcgui.Dialog()
-    xmltv_id = dialog.input('New xmltv id', xmltv_id, type=xbmcgui.INPUT_ALPHANUM)
-    if xmltv_id:
-        del(channels[id])
-        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
-        channels[id] = channel
-        xbmc.executebuiltin('Container.Refresh')
 
-@plugin.route('/rename_channel/<id>')
-def rename_channel(id):
-    channels = plugin.get_storage('channels')
-    channel = channels[id]
-    (country,name,site,site_id,xmltv_id) = id.split("|")
-    dialog = xbmcgui.Dialog()
-    name = dialog.input('New Channel Name', name, type=xbmcgui.INPUT_ALPHANUM)
-    if name:
-        del(channels[id])
-        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
-        channels[id] = channel
-        xbmc.executebuiltin('Container.Refresh')
+
 
 @plugin.route('/sort_channels')
 def sort_channels():
-    dialog = xbmcgui.Dialog()
-    how = ['Country','Name','Provider','site id','xmltv id']
-    index = dialog.select('New xmltv id', how)
-    if index == -1:
-        return
     channels = plugin.get_storage('channels')
-    channel_list = []
-    for c in channels:
-        order = channels[c]
-        (country,name,site,site_id,xmltv_id) = c.split("|")
-        channel_list.append((country,name,site,site_id,xmltv_id,order))
-    second_index = 1
-    if index == 1:
-        second_index = 0
-    sorted_channels = sorted(channel_list, key=lambda c: (c[index],c[second_index]))
-    i = 0
-    for (country,name,site,site_id,xmltv_id,order) in sorted_channels:
-        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
-        channels[id] = i
-        i = i + 1
-    xbmc.executebuiltin('Container.Refresh')
+
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            order = json.loads(data)
+        else:
+            order = []
+        f.close()
+    else:
+        order = []
+
+    order.sort(key=lambda k: channels[k].lower())
+
+    f = xbmcvfs.File(path,'w')
+    f.write(json.dumps(order,indent=0))
+
 
 @plugin.route('/move_channel/<id>')
 def move_channel(id):
     channels = plugin.get_storage('channels')
-    channel_list = []
-    for c in channels:
-        order = channels[c]
-        (country,name,site,site_id,xmltv_id) = c.split("|")
-        channel_list.append((country,name,site,site_id,xmltv_id,order))
-    sorted_channels = sorted(channel_list, key=lambda c: c[5])
-    sorted_channels_names = ["%s - [COLOR yellow]%s[/COLOR] - %s (%s) [%s]" % (c[0],c[1],c[2],c[3],c[4]) for c in sorted_channels]
-    length = len(sorted_channels_names)
+
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            order = json.loads(data)
+        else:
+            order = []
+        f.close()
+    else:
+        order = []
+
+    sorted_channels_names = [channels[x] for x in order]
+
     dialog = xbmcgui.Dialog()
 
-    index = dialog.select('Move Before?', sorted_channels_names)
+    index = dialog.select('%s: Move After?' % channels[id], sorted_channels_names)
     if index == -1:
         return
 
-    this_channel = channels[id]
-    order = channels[id]
-    (country,name,site,site_id,xmltv_id) = id.split("|")
-    oldindex = sorted_channels.index((country,name,site,site_id,xmltv_id,order))
-    if oldindex < index:
-        index = index - 1
-    sorted_channels.insert(index, sorted_channels.pop(oldindex))
-    channels.clear()
+    oldindex = order.index(id)
+    order.insert(index+1, order.pop(oldindex))
 
-    i = 0
-    for (country,name,site,site_id,xmltv_id,order) in sorted_channels:
-        id = "%s|%s|%s|%s|%s" % (country,name,site,site_id,xmltv_id)
-        channels[id] = i
-        i = i + 1
+    f = xbmcvfs.File(path,'w')
+    f.write(json.dumps(order,indent=0))
 
     xbmc.executebuiltin('Container.Refresh')
+
 
 @plugin.route('/channels')
 def channels():
     channels = plugin.get_storage('channels')
-    #hidden_channels = plugin.get_storage('hidden_channels')
+    icons = plugin.get_storage('icons')
+
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            order = json.loads(data)
+        else:
+            order = []
+        f.close()
+    else:
+        order = []
+
     items = []
-    for id, name in channels.iteritems():
+    for id in order:
+        name = channels[id]
         items.append(
         {
             'label': name,
             'path': plugin.url_for('move_channel',id=id),
-            #'thumbnail':get_icon_path('settings'),
+            'thumbnail': icons.get(id, get_icon_path('tv')),
             #'context_menu': context_items,
-        })    
-        
-    '''
-    sorted_ids = sorted(channels.items(), key=operator.itemgetter(1))
-    for (id,order) in sorted_ids:
-        #(country,name,site,site_id,xmltv_id) = id.split("|")
-        #if id in hidden_channels:
-        #    label = "%s - [COLOR grey]%s[/COLOR] - %s (%s) [%s]" % (country,name,site,site_id,xmltv_id)
-        #else:
-        #    label = "%s - [COLOR yellow]%s[/COLOR] - %s (%s) [%s]" % (country,name,site,site_id,xmltv_id)
-        context_items = []
-        context_items.append(('Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
-        context_items.append(('Move Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for('move_channel', id=id))))
-        #context_items.append(('Rename Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for('rename_channel', id=id))))
-        #context_items.append(('Rename xmltv id', 'XBMC.RunPlugin(%s)' % (plugin.url_for('rename_id', id=id))))
-        #context_items.append(('Delete Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for('toggle',country=country,site=site,site_id=site_id,xmltv_id=xmltv_id,name=name))))
-        items.append(
-        {
-            'label': label,
-            'path': plugin.url_for('toggle_hide',country=country,site=site,site_id=site_id,xmltv_id=xmltv_id,name=name),
-            'thumbnail':get_icon_path('settings'),
-            'context_menu': context_items,
         })
-    '''
-    return items    
+
+    return items
 
 
 @plugin.route('/')
@@ -878,13 +924,16 @@ def index():
         'path': plugin.url_for('zap'),
         'thumbnail':get_icon_path('tv'),
     })
-    
+
+    context_items = []
+    context_items.append(('Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     items.append(
     {
-        'label': 'Selected Channels',
+        'label': 'Re-order Channels',
         'path': plugin.url_for('channels'),
         'thumbnail':get_icon_path('settings'),
-    })    
+        'context_menu': context_items,
+    })
 
     items.append(
     {
@@ -902,7 +951,7 @@ def index():
 
 
 if __name__ == '__main__':
-
+    create_json_channels()
     plugin.run()
     if big_list_view == True:
         view_mode = int(plugin.get_setting('view_mode'))
