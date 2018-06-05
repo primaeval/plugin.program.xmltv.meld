@@ -899,12 +899,19 @@ def channels():
         name = all_channels.get(id)
         if not name:
             continue
+
+        context_items = []
+        if id in zap_channels:
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+        if id in channels:
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+
         items.append(
         {
             'label': name,
             'path': plugin.url_for('move_channel',id=id),
             'thumbnail': icons.get(id, get_icon_path('tv')),
-            #'context_menu': context_items,
+            'context_menu': context_items,
         })
 
     return items
