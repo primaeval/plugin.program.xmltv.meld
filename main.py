@@ -312,7 +312,7 @@ def update():
         id = re.search('channel="(.*?)"',programme).group(1)
         if id in ids:
             new_id = ids[id]
-            programme = re.sub('channel=".*?"', 'id="%s"' % new_id, programme)
+            programme = re.sub('channel=".*?"', 'channel="%s"' % new_id, programme)
         new_selected_programmes.append(programme)
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
