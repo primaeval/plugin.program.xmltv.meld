@@ -215,6 +215,7 @@ def update():
 
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
+    ids = plugin.get_storage("ids")
 
     streams = []
     selected_channels = {}
@@ -266,7 +267,7 @@ def update():
 
             if id in channels:
                 selected_channels[id] = channel
-                streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,id,icon,group,name,'http://localhost'))
+                streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,'http://localhost'))
 
         for programme in xprogrammes:
             id = re.search('channel="(.*?)"', programme)
@@ -297,12 +298,29 @@ def update():
         if channel_data:
             xmltv_channels.append(channel_data)
 
+
+    new_xmltv_channels = []
+    for channel in xmltv_channels:
+        id = re.search('id="(.*?)"',channel).group(1)
+        if id in ids:
+            new_id = ids[id]
+            channel = re.sub('id=".*?"', 'id="%s"' % new_id, channel)
+        new_xmltv_channels.append(channel)
+
+    new_selected_programmes = []
+    for programme in selected_programmes:
+        id = re.search('channel="(.*?)"',programme).group(1)
+        if id in ids:
+            new_id = ids[id]
+            programme = re.sub('channel=".*?"', 'id="%s"' % new_id, programme)
+        new_selected_programmes.append(programme)
+
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
-    f.write('\n\n'.join(xmltv_channels).encode("utf8"))
+    f.write('\n\n'.join(new_xmltv_channels).encode("utf8"))
     f.write('\n\n\n')
-    f.write('\n\n'.join(selected_programmes).encode("utf8"))
+    f.write('\n\n'.join(new_selected_programmes).encode("utf8"))
     f.write('\n')
     f.write('</tv>\n')
     f.close()
@@ -416,6 +434,20 @@ def delete_channel(id):
     delete_json_channel(id)
 
 
+@plugin.route('/rename_channel/<id>')
+def rename_channel(id):
+    id = id.decode("utf8")
+
+    ids = plugin.get_storage('ids')
+    new_id = ids.get(id,id)
+
+    new_id = xbmcgui.Dialog().input(id,new_id)
+    if new_id:
+        ids[id] = new_id
+    elif id in ids:
+        del ids[id]
+
+
 @plugin.route('/add_zap/<name>/<url>')
 def add_zap(name,url):
     zaps = plugin.get_storage('zaps')
@@ -438,6 +470,20 @@ def delete_zap_channel(id):
         del channels[id]
 
     delete_json_channel(id)
+
+
+@plugin.route('/rename_zap_channel/<id>')
+def rename_zap_channel(id):
+    id = id.decode("utf8")
+
+    ids = plugin.get_storage('ids')
+    new_id = ids.get(id,id)
+
+    new_id = xbmcgui.Dialog().input(id,id)
+    if new_id:
+        ids[id] = new_id
+    elif id in ids:
+        del ids[id]
 
 
 @plugin.route('/add_zap_channel/<name>/<id>')
@@ -903,8 +949,10 @@ def channels():
         context_items = []
         if id in zap_channels:
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change zap channel id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
         if id in channels:
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change channel id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
 
         items.append(
         {
