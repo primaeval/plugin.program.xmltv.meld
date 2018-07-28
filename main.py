@@ -247,8 +247,13 @@ def update():
             f.close()
             data = xbmcvfs.File(filename[:-3],'r').read()
         else:
-            data = xbmcvfs.File(filename,'r').read()
-        data = data.decode("utf8")
+            if filename.startswith("http"):
+                data = xbmcvfs.File(filename,'r').read()
+            else:
+                f = open(filename,'r')
+                data = f.read()
+                f.close()
+        #data = data.decode("utf8")
 
         xchannels = re.findall('(<channel.*?</channel>)', data, flags=(re.I|re.DOTALL))
         xprogrammes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
@@ -300,7 +305,6 @@ def update():
         if channel_data:
             xmltv_channels.append(channel_data)
 
-
     new_xmltv_channels = []
     for channel in xmltv_channels:
         id = re.search('id="(.*?)"',channel).group(1)
@@ -325,7 +329,8 @@ def update():
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
     f.write('\n\n'.join(new_xmltv_channels).encode("utf8"))
     f.write('\n\n\n')
-    f.write('\n\n'.join(new_selected_programmes).encode("utf8"))
+    for programme in new_selected_programmes:
+        f.write(programme.encode("utf8")+'\n\n')
     f.write('\n')
     f.write('</tv>\n')
     f.close()
