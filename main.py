@@ -254,11 +254,16 @@ def update():
                 data = f.read()
                 f.close()
         #data = data.decode("utf8")
+        encoding = re.search('encoding="(.*?)"',data)
+        if encoding:
+            encoding = encoding.group(1)
 
         xchannels = re.findall('(<channel.*?</channel>)', data, flags=(re.I|re.DOTALL))
         xprogrammes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
 
         for channel in xchannels:
+            if encoding:
+                channel = channel.decode(encoding)
             id = re.search('id="(.*?)"', channel)
             if id:
                 id = htmlparser.unescape(id.group(1))
@@ -277,6 +282,8 @@ def update():
                 streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,'http://localhost'))
 
         for programme in xprogrammes:
+            if encoding:
+                programme = programme.decode(encoding)
             id = re.search('channel="(.*?)"', programme)
             if id:
                 id = htmlparser.unescape(id.group(1))
@@ -924,6 +931,7 @@ def sort_channels():
 
 @plugin.route('/move_channel/<id>')
 def move_channel(id):
+    id = id.decode('utf8')
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
 
@@ -1002,7 +1010,7 @@ def channels():
         items.append(
         {
             'label': name,
-            'path': plugin.url_for('move_channel',id=id),
+            'path': plugin.url_for('move_channel',id=id.encode("utf8")),
             'thumbnail': icons.get(id, get_icon_path('tv')),
             'context_menu': context_items,
         })
