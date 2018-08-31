@@ -2,6 +2,8 @@
 <category label="Data">
 <setting id="busybox" label="busybox exe" type="file" default=""/>
 
+<setting id="koditvepg" label="koditvepg.com url" type="text" default="koditvepg.com"/>
+
 <setting id="zap.days" label="Zap Days" type="number" default="1"/>
 <setting id="zap.usa.zipcode" label="Zap USA Zipcode" type="text" default="90210"/>
 <setting id="zap.can.zipcode" label="Zap Canada Zipcode" type="text" default="M5V2T6"/>

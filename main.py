@@ -230,6 +230,11 @@ def update():
 
         if '\\' in url:
             url = url.replace('\\','/')
+
+        koditvepg = plugin.get_setting('koditvepg')
+        if koditvepg:
+            url = url.replace('koditvepg.com',koditvepg)
+
         filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
         xbmcvfs.copy(url,filename)
 
@@ -561,8 +566,13 @@ def select_channels(url, add_all=False, remove_all=False):
 
     if '\\' in url:
         url = url.replace('\\','/')
-    filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
-    xbmcvfs.copy(url,filename)
+
+    koditvepg = plugin.get_setting('koditvepg')
+    if koditvepg:
+        url2 = url.replace('koditvepg.com',koditvepg)
+
+    filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url2.rsplit('?',1)[0].rsplit('/',1)[-1])
+    xbmcvfs.copy(url2,filename)
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
