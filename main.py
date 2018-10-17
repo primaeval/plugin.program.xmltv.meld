@@ -705,7 +705,7 @@ def custom_xmltv():
 @plugin.route('/rytec_xmltv')
 def rytec_xmltv():
 
-    sources = xbmcvfs.File("http://rytecepg.ipservers.eu/epg_data/rytec.King.sources.xml","r").read()
+    sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml","r").read()
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
