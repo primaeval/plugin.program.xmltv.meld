@@ -20,6 +20,9 @@ from HTMLParser import HTMLParser
 plugin = Plugin()
 big_list_view = False
 
+def decode(x):
+    try: return x.decode("utf8")
+    except: return x
 
 def addon_id():
     return xbmcaddon.Addon().getAddonInfo('id')
@@ -259,7 +262,7 @@ def update():
                 f = open(filename,'r')
                 data = f.read()
                 f.close()
-        #data = data.decode("utf8")
+
         encoding = re.search('encoding="(.*?)"',data)
         if encoding:
             encoding = encoding.group(1)
@@ -437,8 +440,8 @@ def delete_json_channel(id):
 
 @plugin.route('/add_channel/<name>/<id>')
 def add_channel(name,id):
-    name = name.decode("utf")
-    id = id.decode("utf8")
+    name = decode(name)
+    id = decode(id.decode)
 
     channels = plugin.get_storage('channels')
     channels[id] = name
@@ -448,7 +451,7 @@ def add_channel(name,id):
 
 @plugin.route('/delete_channel/<id>')
 def delete_channel(id):
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     channels = plugin.get_storage('channels')
     if id in channels:
@@ -459,7 +462,7 @@ def delete_channel(id):
 
 @plugin.route('/rename_channel_id/<id>')
 def rename_channel_id(id):
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     ids = plugin.get_storage('ids')
     new_id = ids.get(id,id)
@@ -472,7 +475,7 @@ def rename_channel_id(id):
 
 @plugin.route('/rename_channel/<id>')
 def rename_channel(id):
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     channels = plugin.get_storage('channels')
     names = plugin.get_storage('names')
@@ -501,7 +504,7 @@ def delete_zap(url):
 
 @plugin.route('/delete_zap_channel/<id>')
 def delete_zap_channel(id):
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     channels = plugin.get_storage('zap_channels')
     if id in channels:
@@ -512,7 +515,7 @@ def delete_zap_channel(id):
 
 @plugin.route('/rename_zap_channel_id/<id>')
 def rename_zap_channel_id(id):
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     ids = plugin.get_storage('ids')
     new_id = ids.get(id,id)
@@ -526,7 +529,7 @@ def rename_zap_channel_id(id):
 
 @plugin.route('/rename_zap_channel/<id>')
 def rename_zap_channel(id):
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     zap_channels = plugin.get_storage('zap_channels')
     names = plugin.get_storage('names')
@@ -543,7 +546,7 @@ def rename_zap_channel(id):
 @plugin.route('/add_zap_channel/<name>/<id>')
 def add_zap_channel(name,id):
     name = name.decode("utf")
-    id = id.decode("utf8")
+    id = decode(id.decode)
 
     channels = plugin.get_storage('zap_channels')
     channels[id] = name
@@ -597,7 +600,7 @@ def select_channels(url, add_all=False, remove_all=False):
     items = []
     channels = plugin.get_storage('channels')
 
-    match = re.findall('<channel(.*?)</channel>', data.decode("utf8"), flags=(re.I|re.DOTALL))
+    match = re.findall('<channel(.*?)</channel>', decode(data), flags=(re.I|re.DOTALL))
     if match:
 
         for m in match:
@@ -943,7 +946,7 @@ def sort_channels():
 
 @plugin.route('/move_channel/<id>')
 def move_channel(id):
-    id = id.decode('utf8')
+    id = decode(id.decode)
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
 
