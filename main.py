@@ -441,7 +441,7 @@ def delete_json_channel(id):
 @plugin.route('/add_channel/<name>/<id>')
 def add_channel(name,id):
     name = decode(name)
-    id = decode(id.decode)
+    id = decode(id)
 
     channels = plugin.get_storage('channels')
     channels[id] = name
@@ -451,7 +451,7 @@ def add_channel(name,id):
 
 @plugin.route('/delete_channel/<id>')
 def delete_channel(id):
-    id = decode(id.decode)
+    id = decode(id)
 
     channels = plugin.get_storage('channels')
     if id in channels:
@@ -462,7 +462,7 @@ def delete_channel(id):
 
 @plugin.route('/rename_channel_id/<id>')
 def rename_channel_id(id):
-    id = decode(id.decode)
+    id = decode(id)
 
     ids = plugin.get_storage('ids')
     new_id = ids.get(id,id)
@@ -475,7 +475,7 @@ def rename_channel_id(id):
 
 @plugin.route('/rename_channel/<id>')
 def rename_channel(id):
-    id = decode(id.decode)
+    id = decode(id)
 
     channels = plugin.get_storage('channels')
     names = plugin.get_storage('names')
@@ -504,7 +504,7 @@ def delete_zap(url):
 
 @plugin.route('/delete_zap_channel/<id>')
 def delete_zap_channel(id):
-    id = decode(id.decode)
+    id = decode(id)
 
     channels = plugin.get_storage('zap_channels')
     if id in channels:
@@ -515,7 +515,7 @@ def delete_zap_channel(id):
 
 @plugin.route('/rename_zap_channel_id/<id>')
 def rename_zap_channel_id(id):
-    id = decode(id.decode)
+    id = decode(id)
 
     ids = plugin.get_storage('ids')
     new_id = ids.get(id,id)
@@ -529,7 +529,7 @@ def rename_zap_channel_id(id):
 
 @plugin.route('/rename_zap_channel/<id>')
 def rename_zap_channel(id):
-    id = decode(id.decode)
+    id = decode(id)
 
     zap_channels = plugin.get_storage('zap_channels')
     names = plugin.get_storage('names')
@@ -546,7 +546,7 @@ def rename_zap_channel(id):
 @plugin.route('/add_zap_channel/<name>/<id>')
 def add_zap_channel(name,id):
     name = name.decode("utf")
-    id = decode(id.decode)
+    id = decode(id)
 
     channels = plugin.get_storage('zap_channels')
     channels[id] = name
@@ -946,7 +946,7 @@ def sort_channels():
 
 @plugin.route('/move_channel/<id>')
 def move_channel(id):
-    id = decode(id.decode)
+    id = decode(id)
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
 
