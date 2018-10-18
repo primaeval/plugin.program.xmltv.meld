@@ -223,7 +223,7 @@ def update():
     ids = plugin.get_storage("ids")
     names = plugin.get_storage("names")
 
-    m3u_streams = []
+    m3u_streams = {}
     selected_channels = {}
     selected_programmes = []
 
@@ -290,7 +290,7 @@ def update():
             if id in channels:
                 selected_channels[id] = channel
                 name = names.get(id,name)
-                m3u_streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,streams.get(id,'http://localhost')))
+                m3u_streams[id] = '#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,streams.get(id,'http://localhost'))
 
         for programme in xprogrammes:
             if encoding:
@@ -322,6 +322,11 @@ def update():
         channel_data = selected_channels.get(id)
         if channel_data:
             xmltv_channels.append(channel_data)
+
+    sorted_streams = []
+    for id in channel_order:
+        sorted_streams.append(m3u_streams[id])
+
 
     new_xmltv_channels = []
     for channel in xmltv_channels:
@@ -355,7 +360,7 @@ def update():
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/channels.m3u8",'w')
     f.write('#EXTM3U\n\n')
-    f.write('\n'.join(m3u_streams).encode("utf8"))
+    f.write('\n'.join(sorted_streams).encode("utf8"))
     f.write('\n')
     f.close()
 
