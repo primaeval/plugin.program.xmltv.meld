@@ -499,6 +499,53 @@ def rename_channel(id):
         del names[id]
 
 
+@plugin.route('/add_folder')
+def add_folder():
+    folders = plugin.get_storage('folders')
+
+    addons = get_addons()
+
+    addon_names = ["[B]%s[/B]" % x["name"] for x in addons]
+    addon_names = addon_names + ["%s" % x["name"] for x in addons]
+
+    index = xbmcgui.Dialog().select("Add Stream Folder Subscription:" , addon_names )
+
+    if index == -1:
+        return
+    save = False
+    if index > len(addons):
+        addon = addons[index - len(addons)]
+        save = True
+    else:
+        addon = addons[index]
+
+    addonid = addon['addonid']
+    path = "plugin://%s" % addonid
+
+    if save:
+        label = addon["name"]
+        folders[path] = label
+        return
+
+
+    while True:
+        dirs,files = get_folder(path)
+
+        all = [("dir",x,"[B]%s[/B]" % dirs[x]) for x in sorted(dirs,key=lambda k: dirs[k])]
+        all = all + [("file",x,dirs[x]) for x in sorted(dirs,key=lambda k: dirs[k])]
+
+        labels = [x[2] for x in all]
+
+        index = xbmcgui.Dialog().select("Add Stream Folder Subscription:", labels )
+        if index == None:
+            return
+        type,path,label = all[index]
+
+        if type == "file":
+            folders[path] = label
+            break
+
+
 @plugin.route('/channel_stream/<id>')
 def channel_stream(id):
     id = decode(id)
@@ -516,7 +563,7 @@ def channel_stream(id):
     addon_names = [x["name"] for x in addons]
 
     index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), addon_names )
-    log(index)
+
     if index == -1:
         return
     addon = addons[index]
@@ -1154,6 +1201,7 @@ def index():
 
     context_items = []
     context_items.append(('Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
+    context_items.append(('Add Folder Subsciption', 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_folder'))))
     items.append(
     {
         'label': 'Channels',
