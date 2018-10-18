@@ -516,7 +516,7 @@ def channel_stream(id):
     addon_names = [x["name"] for x in addons]
 
     index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), addon_names )
-    log(index)
+
     if index == -1:
         return
     addon = addons[index]
