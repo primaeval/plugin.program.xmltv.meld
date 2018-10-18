@@ -16,6 +16,7 @@ import platform
 import pickle
 #import lzma
 from HTMLParser import HTMLParser
+from rpc import RPC
 
 plugin = Plugin()
 big_list_view = False
@@ -218,10 +219,11 @@ def update():
 
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
+    streams = plugin.get_storage('streams')
     ids = plugin.get_storage("ids")
     names = plugin.get_storage("names")
 
-    streams = []
+    m3u_streams = []
     selected_channels = {}
     selected_programmes = []
 
@@ -288,7 +290,7 @@ def update():
             if id in channels:
                 selected_channels[id] = channel
                 name = names.get(id,name)
-                streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,'http://localhost'))
+                m3u_streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,streams.get(id,'http://localhost')))
 
         for programme in xprogrammes:
             if encoding:
@@ -353,7 +355,7 @@ def update():
 
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/channels.m3u8",'w')
     f.write('#EXTM3U\n\n')
-    f.write('\n'.join(streams).encode("utf8"))
+    f.write('\n'.join(m3u_streams).encode("utf8"))
     f.write('\n')
     f.close()
 
@@ -378,6 +380,7 @@ def delete_xmltv(url):
     if url in xmltv:
         del xmltv[url]
 
+
 @plugin.route('/add_custom_xmltv/<name>/<url>')
 def add_custom_xmltv(name,url):
     xmltv = plugin.get_storage('custom_xmltv')
@@ -389,6 +392,7 @@ def delete_custom_xmltv(url):
     xmltv = plugin.get_storage('custom_xmltv')
     if url in xmltv:
         del xmltv[url]
+
 
 def create_json_channels():
     path = profile()+'id_order.json'
@@ -473,6 +477,7 @@ def rename_channel_id(id):
     elif id in ids:
         del ids[id]
 
+
 @plugin.route('/rename_channel/<id>')
 def rename_channel(id):
     id = decode(id)
@@ -487,6 +492,81 @@ def rename_channel(id):
         names[id] = new_name
     elif id in names:
         del names[id]
+
+
+@plugin.route('/channel_stream/<id>')
+def channel_stream(id):
+    id = decode(id)
+
+    channels = plugin.get_storage('channels')
+    streams = plugin.get_storage('streams')
+    names = plugin.get_storage('names')
+    name = channels[id]
+    new_name = names.get(id,name)
+    ids = plugin.get_storage('ids')
+    new_id = ids.get(id,id)
+
+    addons = get_addons()
+
+    addon_names = [x["name"] for x in addons]
+
+    index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), addon_names )
+    if index == None:
+        return
+    addon = addons[index]
+
+    addonid = addon['addonid']
+    path = "plugin://%s" % addonid
+
+
+    while True:
+        dirs,files = get_folder(path)
+
+        all = [("dir",x,"[B]%s[/B]" % dirs[x]) for x in sorted(dirs,key=lambda k: dirs[k])]
+        all = all + [("file",x,files[x]) for x in sorted(files,key=lambda k: files[k])]
+
+        labels = [x[2] for x in all]
+
+        index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), labels )
+        if index == None:
+            return
+        type,path,label = all[index]
+
+        if type == "file":
+            streams[id] = path
+            break
+
+
+
+@plugin.route('/get_addons')
+def get_addons():
+    all_addons = []
+    for type in ["xbmc.addon.video"]:#, "xbmc.addon.audio"]:
+        try: response = RPC.addons.get_addons(type=type,properties=["name", "thumbnail"])
+        except: continue
+        if "addons" in response:
+            found_addons = response["addons"]
+            all_addons = all_addons + found_addons
+
+    seen = set()
+    addons = []
+    for addon in all_addons:
+        if addon['addonid'] not in seen:
+            addons.append(addon)
+        seen.add(addon['addonid'])
+
+    addons = sorted(addons, key=lambda addon: remove_formatting(addon['name']).lower())
+    return addons
+
+
+@plugin.route('/get_folder/<path>')
+def get_folder(path):
+    try: response = RPC.files.get_directory(media="files", directory=path, properties=["thumbnail"])
+    except: return
+    all = response["files"]
+    dirs = {f["file"]:remove_formatting(f["label"]) for f in all if f["filetype"] == "directory"}
+    files = {f["file"]:remove_formatting(f["label"]) for f in all if f["filetype"] == "file"}
+    return dirs,files
 
 
 @plugin.route('/add_zap/<name>/<url>')
@@ -1021,6 +1101,7 @@ def channels():
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change channel id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
 
         items.append(
         {
@@ -1069,7 +1150,7 @@ def index():
     context_items.append(('Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     items.append(
     {
-        'label': 'Re-order Channels',
+        'label': 'Channels',
         'path': plugin.url_for('channels'),
         'thumbnail':get_icon_path('settings'),
         'context_menu': context_items,
