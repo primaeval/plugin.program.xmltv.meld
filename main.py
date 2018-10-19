@@ -139,6 +139,7 @@ def update_zap():
 
     zap_channels = plugin.get_storage('zap_channels')
     streams = plugin.get_storage('streams')
+    radio = plugin.get_storage('radio')
 
     m3u_streams = {}
     selected_channels = {}
@@ -174,7 +175,13 @@ def update_zap():
 
                 if id in zap_channels:
                     selected_channels[id] = xchannel
-                    m3u_streams[id] ='#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (callSign,id,thumbnail,name,callSign,streams.get(id,'http://localhost'))
+                    if radio.get(id):
+                        group = name+" Radio"
+                        radio_flag = 'radio="true" '
+                    else:
+                        group = name
+                        radio_flag = ''
+                    m3u_streams[id] ='#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,callSign,id,thumbnail,group,callSign,streams.get(id,'http://localhost'))
 
                 events = channel.get('events')
                 for event in events:
@@ -221,6 +228,7 @@ def update():
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
     streams = plugin.get_storage('streams')
+    radio = plugin.get_storage('radio')
     ids = plugin.get_storage("ids")
     names = plugin.get_storage("names")
 
@@ -291,7 +299,13 @@ def update():
             if id in channels:
                 selected_channels[id] = channel
                 name = names.get(id,name)
-                m3u_streams[id] = '#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (name,ids.get(id,id),icon,group,name,streams.get(id,'http://localhost'))
+                if radio.get(id):
+                    group_label = group+" Radio"
+                    radio_flag = 'radio="true" '
+                else:
+                    group_label = group
+                    radio_flag = ''
+                m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,ids.get(id,id),icon,group_label,name,streams.get(id,'http://localhost'))
 
         for programme in xprogrammes:
             if encoding:
@@ -499,6 +513,28 @@ def rename_channel(id):
         names[id] = new_name
     elif id in names:
         del names[id]
+
+@plugin.route('/radio_stream/<id>')
+def radio_stream(id):
+    id = decode(id)
+    channels = plugin.get_storage('channels')
+    radio_stream_dialog(id,channels)
+
+@plugin.route('/zap_radio_stream/<id>')
+def zap_radio_stream(id):
+    id = decode(id)
+    channels = plugin.get_storage('zap_channels')
+    radio_stream_dialog(id,channels)
+
+def radio_stream_dialog(id,channels):
+    radio = plugin.get_storage('radio')
+    names = plugin.get_storage('names')
+    name = channels[id]
+    new_name = names.get(id,name)
+    ids = plugin.get_storage('ids')
+    new_id = ids.get(id,id)
+
+    radio[id] = xbmcgui.Dialog().yesno(new_name,"Radio?")
 
 
 @plugin.route('/channel_stream/<id>')
@@ -1121,11 +1157,13 @@ def channels():
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Zap Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_radio_stream, id=id.encode("utf8")))))
         if id in channels:
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
 
         items.append(
         {
