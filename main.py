@@ -138,8 +138,9 @@ def update_zap():
     zaps = plugin.get_storage('zaps')
 
     zap_channels = plugin.get_storage('zap_channels')
+    streams = plugin.get_storage('streams')
 
-    streams = []
+    m3u_streams = {}
     selected_channels = {}
     selected_programmes = []
 
@@ -173,7 +174,7 @@ def update_zap():
 
                 if id in zap_channels:
                     selected_channels[id] = xchannel
-                    streams.append('#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (callSign,id,thumbnail,name,callSign,'http://localhost'))
+                    m3u_streams[id] ='#EXTINF:-1 tvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (callSign,id,thumbnail,name,callSign,streams.get(id,'http://localhost'))
 
                 events = channel.get('events')
                 for event in events:
@@ -210,7 +211,7 @@ def update_zap():
             count += 1
             gridtime = gridtime + 10800
 
-    return selected_channels,selected_programmes
+    return selected_channels,selected_programmes,m3u_streams
 
 
 @plugin.route('/update')
@@ -302,9 +303,10 @@ def update():
                 if id in channels:
                     selected_programmes.append(programme)
 
-    zap_channels, zap_programmes = update_zap()
+    zap_channels, zap_programmes, zap_m3u_streams = update_zap()
     selected_channels.update(zap_channels)
     selected_programmes = selected_programmes + zap_programmes
+    m3u_streams.update(zap_m3u_streams)
 
     path = profile()+'id_order.json'
     if xbmcvfs.exists(path):
