@@ -750,8 +750,12 @@ def add_custom_xmltv_dialog():
 
 @plugin.route('/custom_xmltv')
 def custom_xmltv():
-
     custom = plugin.get_storage('custom_xmltv')
+
+    name = "Dummy Channels"
+    url = "special://home/addons/plugin.program.xmltv.meld/resources/dummy.xml"
+    if url not in custom:
+        custom[url] = name
 
     items = []
     context_items = []
