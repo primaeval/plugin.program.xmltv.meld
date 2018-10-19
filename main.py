@@ -504,6 +504,17 @@ def channel_stream(id):
     id = decode(id)
 
     channels = plugin.get_storage('channels')
+    channel_stream_dialog(id,channels)
+
+@plugin.route('/zap_channel_stream/<id>')
+def zap_channel_stream(id):
+    id = decode(id)
+
+    channels = plugin.get_storage('zap_channels')
+    channel_stream_dialog(id,channels)
+
+
+def channel_stream_dialog(id,channels):
     streams = plugin.get_storage('streams')
     names = plugin.get_storage('names')
     name = channels[id]
@@ -1104,13 +1115,14 @@ def channels():
 
         context_items = []
         if id in zap_channels:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change zap channel id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename zap channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Zap Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_channel_stream, id=id.encode("utf8")))))
         if id in channels:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change channel id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
 
         items.append(
@@ -1157,7 +1169,7 @@ def index():
     })
 
     context_items = []
-    context_items.append(('Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     items.append(
     {
         'label': 'Channels',
