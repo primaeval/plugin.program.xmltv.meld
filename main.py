@@ -1152,6 +1152,9 @@ def zap_country(country):
 @plugin.route('/sort_channels')
 def sort_channels():
     channels = plugin.get_storage('channels')
+    zap_channels = plugin.get_storage('zap_channels')
+    all_channels = channels.raw_dict()
+    all_channels.update(zap_channels.raw_dict())
 
     path = profile()+'id_order.json'
     if xbmcvfs.exists(path):
@@ -1165,7 +1168,7 @@ def sort_channels():
     else:
         order = []
 
-    order.sort(key=lambda k: channels[k].lower())
+    order.sort(key=lambda k: all_channels[k][0].lower())
 
     f = xbmcvfs.File(path,'w')
     f.write(json.dumps(order,indent=0))
