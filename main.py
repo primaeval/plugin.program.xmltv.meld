@@ -472,6 +472,7 @@ def add_channel(name,id):
     channels[id] = name
 
     add_json_channel(id)
+    #xbmc.executebuiltin('Container.Refresh')
 
 
 @plugin.route('/delete_channel/<id>')
@@ -602,7 +603,7 @@ def guess_channel_stream(id):
     id = decode(id)
 
     channels = plugin.get_storage('channels')
-    guess_channel_stream_dialog(id,channels)
+    return guess_channel_stream_dialog(id,channels)
 
 
 @plugin.route('/guess_zap_channel_stream/<id>')
@@ -610,7 +611,7 @@ def guess_zap_channel_stream(id):
     id = decode(id)
 
     channels = plugin.get_storage('zap_channels')
-    guess_channel_stream_dialog(id,channels)
+    return guess_channel_stream_dialog(id,channels)
 
 
 def guess_channel_stream_dialog(id,channels):
@@ -647,9 +648,48 @@ def guess_channel_stream_dialog(id,channels):
 
     index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), labels )
     if index == -1:
-        return
+        return True
     (type,label,addon,addon_label,folder,folder_label,file) = all[index]
     streams[id] = file
+
+
+@plugin.route('/guess_streams')
+def guess_streams():
+    channels = plugin.get_storage('channels')
+    zap_channels = plugin.get_storage('zap_channels')
+    names = plugin.get_storage('names')
+
+    all_channels = dict(channels.items())
+    all_channels.update(dict(zap_channels.items()))
+
+    icons = plugin.get_storage('icons')
+
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            order = json.loads(data)
+        else:
+            order = []
+        f.close()
+    else:
+        order = []
+
+    items = []
+    for id in order:
+        name = all_channels.get(id)
+        if not name:
+            continue
+        name = names.get(id,name)
+
+        context_items = []
+        if id in zap_channels:
+            if guess_zap_channel_stream(id):
+                return
+        if id in channels:
+            if guess_channel_stream(id):
+                return
 
 
 @plugin.route('/paste_channel_stream/<id>')
@@ -778,6 +818,7 @@ def add_zap_channel(name,id):
     channels[id] = name
 
     add_json_channel(id)
+    #xbmc.executebuiltin('Container.Refresh')
 
 
 @plugin.route('/add_all_channels/<url>')
@@ -1438,6 +1479,7 @@ def index():
 
     context_items = []
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess All Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_streams'))))
     items.append(
     {
         'label': 'Channels',
