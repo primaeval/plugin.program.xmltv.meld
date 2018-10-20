@@ -513,6 +513,7 @@ def rename_channel(id):
         names[id] = new_name
     elif id in names:
         del names[id]
+    xbmc.executebuiltin('Container.Refresh')
 
 
 @plugin.route('/radio_stream/<id>')
@@ -765,6 +766,7 @@ def rename_zap_channel(id):
         names[id] = new_name
     elif id in names:
         del names[id]
+    xbmc.executebuiltin('Container.Refresh')
 
 
 @plugin.route('/add_zap_channel/<name>/<id>')
