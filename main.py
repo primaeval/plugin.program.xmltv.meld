@@ -653,10 +653,20 @@ def guess_channel_stream_dialog(id,channels):
     streams[id] = file
 
 
+@plugin.route('/guess_missing_streams')
+def guess_missing_streams():
+    guess_streams_function(missing=True)
+
+
 @plugin.route('/guess_streams')
 def guess_streams():
+    guess_streams_function()
+
+
+def guess_streams_function(missing=False):
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
+    streams = plugin.get_storage('streams')
     names = plugin.get_storage('names')
 
     all_channels = dict(channels.items())
@@ -685,11 +695,13 @@ def guess_streams():
 
         context_items = []
         if id in zap_channels:
-            if guess_zap_channel_stream(id):
-                return
+            if not (streams.get(id) and missing):
+                if guess_zap_channel_stream(id):
+                    return
         if id in channels:
-            if guess_channel_stream(id):
-                return
+            if not (streams.get(id) and missing):
+                if guess_channel_stream(id):
+                    return
 
 
 @plugin.route('/paste_channel_stream/<id>')
@@ -1480,6 +1492,7 @@ def index():
     context_items = []
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess All Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_streams'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess Missing Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_missing_streams'))))
     items.append(
     {
         'label': 'Channels',
