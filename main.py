@@ -642,7 +642,7 @@ def guess_channel_stream_dialog(id,channels):
                 other.append(("other",label,addon,addon_label,folder,folder_label,file))
 
     all = sorted(exact,key=lambda k: k[1]) + sorted(partial,key=lambda k: k[1]) + sorted(other,key=lambda k: k[1])
-    labels = [x[1] for x in all]
+    labels = ["%s - %s" % (x[3],x[1]) for x in all]
 
     index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), labels )
     if index == -1:
