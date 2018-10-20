@@ -633,9 +633,10 @@ def guess_channel_stream_dialog(id,channels):
         dirs,files = get_folder(folder)
         for file in files:
             label = files[file]
-            if new_name.lower() == label.lower():
+            new_name_match = re.sub(" hd$",'',new_name.lower())
+            if new_name_match == label.lower():
                 exact.append(("exact","[COLOR yellow]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
-            elif new_name.lower() in label.lower():
+            elif new_name_match in label.lower():
                 partial.append(("partial","[COLOR orange]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
             else:
                 other.append(("other",label,addon,addon_label,folder,folder_label,file))
