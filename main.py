@@ -1211,6 +1211,136 @@ def channels():
 
     return items
 
+@plugin.route('/folders_paths/<id>/<path>')
+def folders_paths(id,path):
+    folders = plugin.get_storage('folders')
+    paths = plugin.get_storage('paths')
+    try: response = RPC.files.get_directory(media="files", directory=path, properties=["thumbnail"])
+    except: return
+    files = response["files"]
+    dirs = {f["file"]:remove_formatting(f["label"]) for f in files if f["filetype"] == "directory"}
+    links = {}
+    thumbnails = {}
+    for f in files:
+        if f["filetype"] == "file":
+            label = remove_formatting(f["label"])
+            url = f["file"]
+            links[url] = label
+            thumbnails[url] = f["thumbnail"]
+
+    items = []
+
+    for folder_path in sorted(dirs,key=lambda k: dirs[k].lower()):
+        label = dirs[folder_path]
+        paths[folder_path] = label
+        context_items = []
+        if path in folders:
+            fancy_label = "[COLOR yellow][B]%s[/B][/COLOR] " % label
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_folder, id=id, path=folder_path))))
+        else:
+            fancy_label = "[B]%s[/B]" % label
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_folder, id=id, path=folder_path))))
+        items.append(
+        {
+            'label': fancy_label,
+            'path': plugin.url_for('folders_paths',id=id, path=folder_path),
+            'thumbnail': get_icon_path('tv'),
+            'context_menu': context_items,
+        })
+
+    for url in sorted(links):
+        items.append(
+        {
+            'label': links[url],
+            'path': url,
+            'thumbnail': thumbnails[url],
+            'is_playable': True,
+            'info_type': 'Video',
+            'info':{"mediatype": "movie", "title": links[url]}
+        })
+    return items
+
+@plugin.route('/add_folder/<id>/<path>')
+def add_folder(id,path):
+    folders = plugin.get_storage('folders')
+    folders[path] = id
+    xbmc.executebuiltin('Container.Refresh')
+
+@plugin.route('/remove_folder/<id>/<path>')
+def remove_folder(id,path):
+    folders = plugin.get_storage('folders')
+    del folders[path]
+    xbmc.executebuiltin('Container.Refresh')
+
+
+@plugin.route('/remove_folders')
+def remove_folders():
+    folders = plugin.get_storage('folders')
+    paths = plugin.get_storage('paths')
+
+    folder_label = [(f,paths.get(f,folders[f])) for f in sorted(folders,key=lambda k: folders[k])]
+    labels = [f[1] for f in folder_label]
+
+    indexes = xbmcgui.Dialog().multiselect("Remove Folders",labels)
+    if indexes:
+        for index in sorted(indexes, reverse=True):
+            url = folder_label[index][0]
+            del folders[url]
+
+
+
+@plugin.route('/play/<url>')
+def play(url):
+    #BUG: Leia
+    xbmc.executebuiltin('PlayMedia(%s)' % url)
+
+@plugin.route('/folders_addons')
+def folders_addons():
+    folders = plugin.get_storage('folders')
+    paths = plugin.get_storage('paths')
+    ids = {}
+    for folder in folders:
+        id = folders[folder]
+        ids[id] = id
+    all_addons = []
+    for type in ["xbmc.addon.video", "xbmc.addon.audio"]:
+        try: response = RPC.addons.get_addons(type=type,properties=["name", "thumbnail"])
+        except: continue
+        if "addons" in response:
+            found_addons = response["addons"]
+            all_addons = all_addons + found_addons
+
+    seen = set()
+    addons = []
+    for addon in all_addons:
+        if addon['addonid'] not in seen:
+            addons.append(addon)
+        seen.add(addon['addonid'])
+
+    items = []
+
+    addons = sorted(addons, key=lambda addon: remove_formatting(addon['name']).lower())
+    for addon in addons:
+        label = remove_formatting(addon['name'])
+        id = addon['addonid']
+        path = "plugin://%s" % id
+        paths[path] = label
+        context_items = []
+        if id in ids:
+            fancy_label = "[COLOR yellow][B]%s[/B][/COLOR] " % label
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_folder, id=id, path=path))))
+        else:
+            fancy_label = "[B]%s[/B]" % label
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_folder, id=id, path=path))))
+        items.append(
+        {
+            'label': fancy_label,
+            'path': plugin.url_for('folders_paths',id=id, path=path),
+            'thumbnail': get_icon_path('tv'),
+            'context_menu': context_items,
+        })
+    return items
+
 
 @plugin.route('/')
 def index():
@@ -1250,6 +1380,16 @@ def index():
     {
         'label': 'Channels',
         'path': plugin.url_for('channels'),
+        'thumbnail':get_icon_path('settings'),
+        'context_menu': context_items,
+    })
+
+    context_items = []
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_folders'))))
+    items.append(
+    {
+        'label': 'Folders',
+        'path': plugin.url_for('folders_addons'),
         'thumbnail':get_icon_path('settings'),
         'context_menu': context_items,
     })
