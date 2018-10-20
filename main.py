@@ -684,7 +684,7 @@ def paste_channel_stream_dialog(id,channels):
 @plugin.route('/get_addons')
 def get_addons():
     all_addons = []
-    for type in ["xbmc.addon.video"]:#, "xbmc.addon.audio"]:
+    for type in ["xbmc.addon.video","xbmc.addon.audio"]:
         try: response = RPC.addons.get_addons(type=type,properties=["name", "thumbnail"])
         except: continue
         if "addons" in response:
