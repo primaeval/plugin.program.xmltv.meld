@@ -641,10 +641,10 @@ def guess_channel_stream_dialog(id,channels):
             elif new_name_match in label.lower():
                 partial.append(("partial","[COLOR orange]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
             else:
-                other.append(("other",label,addon,addon_label,folder,folder_label,file))
+                other.append(("other","[COLOR blue]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
 
     all = sorted(exact,key=lambda k: k[1]) + sorted(partial,key=lambda k: k[1]) + sorted(other,key=lambda k: k[1])
-    labels = ["%s - %s" % (x[3],x[1]) for x in all]
+    labels = ["%s %s" % (x[1],x[3]) for x in all]
 
     index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), labels )
     if index == -1:
