@@ -596,6 +596,60 @@ def channel_stream_dialog(id,channels):
             break
 
 
+@plugin.route('/guess_channel_stream/<id>')
+def guess_channel_stream(id):
+    id = decode(id)
+
+    channels = plugin.get_storage('channels')
+    guess_channel_stream_dialog(id,channels)
+
+
+@plugin.route('/guess_zap_channel_stream/<id>')
+def guess_zap_channel_stream(id):
+    id = decode(id)
+
+    channels = plugin.get_storage('zap_channels')
+    guess_channel_stream_dialog(id,channels)
+
+
+def guess_channel_stream_dialog(id,channels):
+    streams = plugin.get_storage('streams')
+    names = plugin.get_storage('names')
+    name = channels[id]
+    new_name = names.get(id,name)
+    ids = plugin.get_storage('ids')
+    new_id = ids.get(id,id)
+
+    folders = plugin.get_storage('folders')
+    paths = plugin.get_storage('paths')
+
+    exact = []
+    partial = []
+    other = []
+    for folder in folders:
+        addon = folders[folder]
+        addon_label = paths["plugin://"+addon]
+        folder_label = paths[folder]
+        dirs,files = get_folder(folder)
+        for file in files:
+            label = files[file]
+            if new_name.lower() == label.lower():
+                exact.append(("exact","[COLOR yellow]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
+            elif new_name.lower() in label.lower():
+                partial.append(("partial","[COLOR orange]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
+            else:
+                other.append(("other",label,addon,addon_label,folder,folder_label,file))
+
+    all = sorted(exact,key=lambda k: k[1]) + sorted(partial,key=lambda k: k[1]) + sorted(other,key=lambda k: k[1])
+    labels = [x[1] for x in all]
+
+    index = xbmcgui.Dialog().select("Stream: %s [%s]" % (new_name,new_id), labels )
+    if index == -1:
+        return
+    (type,label,addon,addon_label,folder,folder_label,file) = all[index]
+    streams[id] = file
+
+
 @plugin.route('/paste_channel_stream/<id>')
 def paste_channel_stream(id):
     id = decode(id)
@@ -1191,6 +1245,7 @@ def channels():
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Zap Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_zap_channel_stream, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_zap_channel_stream, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_radio_stream, id=id.encode("utf8")))))
         if id in channels:
@@ -1198,6 +1253,7 @@ def channels():
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
 
