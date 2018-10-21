@@ -381,6 +381,12 @@ def update():
     f.write('\n')
     f.close()
 
+    try:
+        if xbmcvfs.exists('special://profile/addon_data/plugin.program.xmltv.meld/after_update.py'):
+            xbmc.executebuiltin('RunScript(special://profile/addon_data/plugin.program.xmltv.meld/after_update.py)')
+    except Exception as e:
+        log(e)
+
     if plugin.get_setting('notification') == 'true':
         xbmcgui.Dialog().notification("xmltv Meld","update finished",sound=False)
 
