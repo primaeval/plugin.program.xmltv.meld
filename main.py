@@ -223,7 +223,8 @@ def update_zap():
 
 @plugin.route('/update')
 def update():
-    xbmcgui.Dialog().notification("xmltv Meld","update starting",sound=False)
+    if plugin.get_setting('notification') == 'true':
+        xbmcgui.Dialog().notification("xmltv Meld","update starting",sound=False)
 
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
@@ -380,7 +381,8 @@ def update():
     f.write('\n')
     f.close()
 
-    xbmcgui.Dialog().notification("xmltv Meld","update finished",sound=False)
+    if plugin.get_setting('notification') == 'true':
+        xbmcgui.Dialog().notification("xmltv Meld","update finished",sound=False)
 
 
 @plugin.route('/start_update')
