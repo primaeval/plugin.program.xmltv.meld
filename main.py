@@ -229,6 +229,7 @@ def update():
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
     streams = plugin.get_storage('streams')
+    m3us = plugin.get_storage('m3us')
     radio = plugin.get_storage('radio')
     ids = plugin.get_storage("ids")
     names = plugin.get_storage("names")
@@ -342,7 +343,7 @@ def update():
 
     sorted_streams = []
     for id in channel_order:
-        sorted_streams.append(m3u_streams[id])
+        sorted_streams.append(m3u_streams.get(id))
 
 
     new_xmltv_channels = []
@@ -375,9 +376,24 @@ def update():
     f.write('</tv>\n')
     f.close()
 
+    for url in m3us:
+        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
+        success = xbmcvfs.copy(url,filename)
+        if success:
+            fu = xbmcvfs.File(filename,"r")
+            data = fu.read().splitlines()
+            #TODO tvg-shift and merge
+            for line in data:
+                if not line.startswith("#EXTM3U") and line is not None:
+                    sorted_streams.append(line)
+
+
     f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/channels.m3u8",'w')
     f.write('#EXTM3U\n\n')
-    f.write('\n'.join(sorted_streams).encode("utf8"))
+    for line in sorted_streams:
+        if line is not None:
+            line = "%s\n" % line
+            f.write(line.encode("utf8"))
     f.write('\n')
     f.close()
 
@@ -389,6 +405,7 @@ def update():
 
     if plugin.get_setting('notification') == 'true':
         xbmcgui.Dialog().notification("xmltv Meld","update finished",sound=False)
+    #plugin.set_resolved_url("library://video/addons.xml/")
 
 
 @plugin.route('/start_update')
@@ -1383,6 +1400,43 @@ def folders_paths(id,path):
         })
     return items
 
+
+@plugin.route('/add_m3u')
+def add_m3u():
+    m3us = plugin.get_storage('m3us')
+
+    type = xbmcgui.Dialog().select("Add m3u",["URL","File"])
+    if type == -1:
+        return
+    if type == 0:
+        url = xbmcgui.Dialog().input("Add m3u URL")
+        if url:
+            name = xbmcgui.Dialog().input("Add m3u URL Name")
+            if name:
+                m3us[url] = name
+    elif type == 1:
+        url = xbmcgui.Dialog().browse(1, 'Add m3u File', 'files', mask=".m3u|.m3u8")
+        if url:
+            name = xbmcgui.Dialog().input("Add m3u File Name")
+            if name:
+                m3us[url] = name
+
+
+@plugin.route('/remove_m3u')
+def remove_m3u():
+    m3us = plugin.get_storage('m3us')
+
+    m3u_label = [(x,m3us[x]) for x in sorted(m3us, key=lambda k: m3us[k])]
+    labels = [x[1] for x in m3u_label]
+
+    indexes = xbmcgui.Dialog().multiselect("Remove m3us",labels)
+    if indexes:
+        for index in sorted(indexes, reverse=True):
+            url = m3u_label[index][0]
+            del m3us[url]
+
+
+
 @plugin.route('/add_folder/<id>/<path>')
 def add_folder(id,path):
     folders = plugin.get_storage('folders')
@@ -1501,6 +1555,8 @@ def index():
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess All Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_streams'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess Missing Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_missing_streams'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Add m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_m3u'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_m3u'))))
     items.append(
     {
         'label': 'Channels',
