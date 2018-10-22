@@ -229,7 +229,7 @@ def update():
     xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('channels')
     streams = plugin.get_storage('streams')
-    m3us = plugin.get_storage('m3us')
+    m3us = plugin.get_storage('merge_m3us')
     radio = plugin.get_storage('radio')
     ids = plugin.get_storage("ids")
     names = plugin.get_storage("names")
@@ -641,6 +641,8 @@ def guess_zap_channel_stream(id):
 
 def guess_channel_stream_dialog(id,channels):
     streams = plugin.get_storage('streams')
+    m3us = plugin.get_storage('subscribe_m3us')
+    m3u_contents = plugin.get_storage('m3u_contents', TTL=60)
     names = plugin.get_storage('names')
     name = channels[id]
     new_name = names.get(id,name)
@@ -667,6 +669,36 @@ def guess_channel_stream_dialog(id,channels):
                 partial.append(("partial","[COLOR orange]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
             else:
                 other.append(("other","[COLOR blue]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
+
+    for url in m3us:
+        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + urllib.quote(m3us[url]))
+        if filename in m3u_contents:
+            data = json.loads(m3u_contents[filename])
+        else:
+            success = xbmcvfs.copy(url,filename)
+            if success:
+                fu = xbmcvfs.File(filename,"r")
+                data = fu.read()
+                m3u_contents[filename] = json.dumps(data)
+            else:
+                continue
+
+        channels = re.findall('#EXTINF:(.*?)(?:\r\n|\r|\n)(.*?)(?:\r\n|\r|\n|$)', data, flags=(re.I | re.DOTALL))
+        for channel in channels:
+            label = channel[0].rsplit(',', 1)[-1]
+            file = channel[1]
+            new_name_match = re.sub(" hd$",'',new_name.lower())
+            addon = "m3u"
+            addon_label = m3us[url]
+            folder = url
+            folder_label = addon_label
+            if new_name_match == label.lower():
+                exact.append(("exact","[COLOR yellow]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
+            elif new_name_match in label.lower():
+                partial.append(("partial","[COLOR orange]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
+            else:
+                other.append(("other","[COLOR blue]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
+
 
     all = sorted(exact,key=lambda k: k[1]) + sorted(partial,key=lambda k: k[1]) + sorted(other,key=lambda k: k[1])
     labels = ["%s %s" % (x[1],x[3]) for x in all]
@@ -1401,10 +1433,19 @@ def folders_paths(id,path):
     return items
 
 
-@plugin.route('/add_m3u')
-def add_m3u():
-    m3us = plugin.get_storage('m3us')
+@plugin.route('/add_merge_m3u')
+def add_merge_m3u():
+    m3us = plugin.get_storage('merge_m3us')
+    add_m3u(m3us)
 
+
+@plugin.route('/add_subscribe_m3u')
+def add_subscribe_m3u():
+    m3us = plugin.get_storage('subscribe_m3us')
+    add_m3u(m3us)
+
+
+def add_m3u(m3us):
     type = xbmcgui.Dialog().select("Add m3u",["URL","File"])
     if type == -1:
         return
@@ -1422,7 +1463,18 @@ def add_m3u():
                 m3us[url] = name
 
 
-@plugin.route('/remove_m3u')
+@plugin.route('/remove_merge_m3u')
+def remove_merge_m3u():
+    m3us = plugin.get_storage('merge_m3us')
+    remove_m3u(m3us)
+
+
+@plugin.route('/remove_subscribe_m3u')
+def remove_subscribe_m3u():
+    m3us = plugin.get_storage('subscribe_m3us')
+    remove_m3u(m3us)
+
+
 def remove_m3u():
     m3us = plugin.get_storage('m3us')
 
@@ -1555,8 +1607,8 @@ def index():
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess All Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_streams'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess Missing Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_missing_streams'))))
-    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Add m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_m3u'))))
-    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_m3u'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Merge m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_merge_m3u'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_merge_m3u'))))
     items.append(
     {
         'label': 'Channels',
@@ -1567,6 +1619,8 @@ def index():
 
     context_items = []
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_folders'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Subscribe m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_subscribe_m3u'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_subscribe_m3u'))))
     items.append(
     {
         'label': 'Folders',
