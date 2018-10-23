@@ -490,6 +490,55 @@ def delete_json_channel(id):
     f.write(json.dumps(channels,indent=0))
 
 
+@plugin.route('/add_dummy_channel/<url>/<label>')
+def add_dummy_channel(url,label):
+    label = decode(label)
+
+    xmltv = plugin.get_storage('xmltv')
+    name = "Dummy Channels"
+    xml = "special://home/addons/plugin.program.xmltv.meld/resources/dummy.xml"
+    xmltv[xml] = name
+
+    channels = plugin.get_storage('channels')
+    for i in range(1,1000):
+        id = "dummy%03d" % i
+        if id not in channels:
+            break
+
+    name =  remove_formatting(label)
+    channels[id] = name
+
+    add_json_channel(id)
+
+    streams = plugin.get_storage('streams')
+    streams[id] = url
+
+    names = plugin.get_storage('names')
+    if id in names:
+        del names[id]
+    names[id] = name
+
+    #xbmc.executebuiltin('Container.Refresh')
+
+
+@plugin.route('/remove_dummy_channel/<url>')
+def remove_dummy_channel(url):
+    streams = plugin.get_storage('streams')
+    channels = plugin.get_storage('channels')
+    names = plugin.get_storage('names')
+    try:
+        index = streams.values().index(url)
+    except:
+        return
+    id = streams.keys()[index]
+    if id in streams:
+        del streams[id]
+    if id in channels:
+        del channels[id]
+    if id in names:
+        del names[id]
+
+
 @plugin.route('/add_channel/<name>/<id>')
 def add_channel(name,id):
     name = decode(name)
@@ -1423,14 +1472,20 @@ def folders_paths(id,path):
         })
 
     for url in sorted(links):
+        label = links[url]
+        thumbnail = thumbnails[url]
+        context_items = []
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Dummy Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_dummy_channel, url=url, label=label.encode("utf8")))))
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Dummy Channel', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_dummy_channel, url=url))))
         items.append(
         {
-            'label': links[url],
+            'label': label,
             'path': url,
-            'thumbnail': thumbnails[url],
+            'thumbnail': thumbnail,
+            'context_menu': context_items,
             'is_playable': True,
             'info_type': 'Video',
-            'info':{"mediatype": "movie", "title": links[url]}
+            'info':{"mediatype": "movie", "title": label}
         })
     return items
 
@@ -1477,8 +1532,7 @@ def remove_subscribe_m3u():
     remove_m3u(m3us)
 
 
-def remove_m3u():
-    m3us = plugin.get_storage('m3us')
+def remove_m3u(m3us):
 
     m3u_label = [(x,m3us[x]) for x in sorted(m3us, key=lambda k: m3us[k])]
     labels = [x[1] for x in m3u_label]
