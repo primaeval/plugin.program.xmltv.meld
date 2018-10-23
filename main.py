@@ -241,6 +241,8 @@ def update():
     htmlparser = HTMLParser()
 
     for url in xmltv:
+        if "epg.koditvepg.com" in url:
+            continue
 
         group = xmltv[url]
 
@@ -1488,12 +1490,26 @@ def remove_m3u():
             del m3us[url]
 
 
+@plugin.route('/remove_xmltv')
+def remove_xmltv():
+    xmltv = plugin.get_storage('xmltv')
+
+    xmltv_label = [(x,xmltv[x]) for x in sorted(xmltv, key=lambda k: xmltv[k])]
+    labels = ["%s - %s" % (x[1],x[0]) for x in xmltv_label]
+
+    indexes = xbmcgui.Dialog().multiselect("Remove xmltv",labels)
+    if indexes:
+        for index in sorted(indexes, reverse=True):
+            url = xmltv_label[index][0]
+            del xmltv[url]
+
 
 @plugin.route('/add_folder/<id>/<path>')
 def add_folder(id,path):
     folders = plugin.get_storage('folders')
     folders[path] = id
     xbmc.executebuiltin('Container.Refresh')
+
 
 @plugin.route('/remove_folder/<id>/<path>')
 def remove_folder(id,path):
@@ -1574,12 +1590,14 @@ def folders_addons():
 @plugin.route('/')
 def index():
     items = []
-
+    context_items = []
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove xmltv', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_xmltv'))))
     items.append(
     {
         'label': "Custom",
         'path': plugin.url_for('custom_xmltv'),
         'thumbnail':get_icon_path('tv'),
+        'context_menu': context_items,
     })
 
     items.append(
@@ -1587,6 +1605,7 @@ def index():
         'label': "Rytec",
         'path': plugin.url_for('rytec_xmltv'),
         'thumbnail':get_icon_path('tv'),
+        'context_menu': context_items,
     })
 
     items.append(
@@ -1594,6 +1613,7 @@ def index():
         'label': "koditvepg.com",
         'path': plugin.url_for('koditvepg_xmltv'),
         'thumbnail':get_icon_path('tv'),
+        'context_menu': context_items,
     })
 
     items.append(
