@@ -240,10 +240,13 @@ def update():
 
     htmlparser = HTMLParser()
 
-    for url in xmltv:
+    for url in xmltv.keys():
         if "epg.koditvepg.com" in url:
-            continue
+            url2 = url.replace('koditvepg.com','koditvepg2.com')
+            xmltv[url2] = xmltv[url]
+            del xmltv[url]
 
+    for url in xmltv:
         group = xmltv[url]
 
         if '\\' in url:
@@ -252,10 +255,7 @@ def update():
         filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
         success = xbmcvfs.copy(url,filename)
         if not success:
-            url2 = url.replace('koditvepg.com','koditvepg2.com')
-            success = xbmcvfs.copy(url2,filename)
-            if not success:
-                continue
+            continue
 
         if filename.endswith('.xz'):
             f = open(filename+".xml","w")
