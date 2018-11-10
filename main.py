@@ -1463,6 +1463,7 @@ def folders_paths(id,path):
         else:
             fancy_label = "[B]%s[/B]" % label
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_folder, id=id, path=folder_path))))
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Dummy Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_dummy_channels, id=id, path=folder_path))))
         items.append(
         {
             'label': fancy_label,
@@ -1488,6 +1489,25 @@ def folders_paths(id,path):
             'info':{"mediatype": "movie", "title": label}
         })
     return items
+
+@plugin.route('/add_dummy_channels/<id>/<path>')
+def add_dummy_channels(id,path):
+    try: response = RPC.files.get_directory(media="files", directory=path, properties=["thumbnail"])
+    except: return
+    files = response["files"]
+    dirs = {f["file"]:remove_formatting(f["label"]) for f in files if f["filetype"] == "directory"}
+    links = {}
+    thumbnails = {}
+    for f in files:
+        if f["filetype"] == "file":
+            label = remove_formatting(f["label"])
+            url = f["file"]
+            links[url] = label
+            thumbnails[url] = f["thumbnail"]
+
+    for url in sorted(links):
+        label = links[url]
+        add_dummy_channel(url=url, label=label)
 
 
 @plugin.route('/add_merge_m3u')
@@ -1622,7 +1642,7 @@ def folders_addons():
     for addon in addons:
         label = remove_formatting(addon['name'])
         id = addon['addonid']
-        path = "plugin://%s" % id
+        path = "plugin://%s/" % id
         paths[path] = label
         context_items = []
         if id in ids:
@@ -1631,6 +1651,7 @@ def folders_addons():
         else:
             fancy_label = "[B]%s[/B]" % label
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_folder, id=id, path=path))))
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Dummy Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_dummy_channels, id=id, path=path))))
         items.append(
         {
             'label': fancy_label,
