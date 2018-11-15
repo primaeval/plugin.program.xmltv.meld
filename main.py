@@ -1685,7 +1685,7 @@ def index():
 
     items.append(
     {
-        'label': "koditvepg.com",
+        'label': "koditvepg.com GONE PAID",
         'path': plugin.url_for('koditvepg_xmltv'),
         'thumbnail':get_icon_path('tv'),
         'context_menu': context_items,
