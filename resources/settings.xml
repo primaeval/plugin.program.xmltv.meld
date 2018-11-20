@@ -1,7 +1,9 @@
 <settings>
 <category label="Data">
 <setting id="busybox" label="busybox exe" type="file" default=""/>
-
+<setting type="sep"/>
+<setting id="dummy.days" label="Dummy Channel Days" type="number" default="1"/>
+<setting type="sep"/>
 <setting id="zap.days" label="Zap Days" type="number" default="1"/>
 <setting id="zap.usa.zipcode" label="Zap USA Zipcode" type="text" default="90210"/>
 <setting id="zap.can.zipcode" label="Zap Canada Zipcode" type="text" default="M5V2T6"/>

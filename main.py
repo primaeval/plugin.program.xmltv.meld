@@ -321,6 +321,32 @@ def update():
                 if id in channels:
                     selected_programmes.append(programme)
 
+        if url.endswith('/dummy.xml'):
+            for channel in xchannels:
+                if encoding:
+                    channel = channel.decode(encoding)
+                id = re.search('id="(.*?)"', channel)
+                if id:
+                    id = htmlparser.unescape(id.group(1))
+                if id in channels:
+                    now = datetime.datetime.now()
+                    now = now.replace(minute=0,second=0)
+                    for i in range(24*plugin.get_setting('dummy.days',int)):
+                        start = now + datetime.timedelta(hours=i)
+                        stop = start + datetime.timedelta(hours=1)
+                        title = "%s-%s" % (start.strftime("%Y-%m-%d %H:%M"),stop.strftime("%H:%M"))
+                        start = start.strftime("%Y%m%d%H%M%S")
+                        stop = stop.strftime("%Y%m%d%H%M%S")
+                        offset = divmod(-time.timezone,3600)
+                        offset = "%02d%02d" % (offset[0],offset[1])
+                        if offset[0] >= 0:
+                            offset = "+"+offset
+                        else:
+                            offset = "-"+offset
+                        programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title lang="en">%s</title></programme>' % (start,offset,stop,offset,id,title)
+                        selected_programmes.append(programme)
+
+
     zap_channels, zap_programmes, zap_m3u_streams = update_zap()
     selected_channels.update(zap_channels)
     selected_programmes = selected_programmes + zap_programmes
