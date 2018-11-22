@@ -330,10 +330,10 @@ def update():
                     id = htmlparser.unescape(id.group(1))
                 if id in channels:
                     now = datetime.datetime.now()
-                    now = now.replace(minute=0,second=0)
-                    for i in range(24*plugin.get_setting('dummy.days',int)):
+                    now = now.replace(hour=plugin.get_setting('dummy.offset',int),minute=0,second=0)
+                    for i in range(0,24*plugin.get_setting('dummy.days',int),plugin.get_setting('dummy.hours',int)):
                         start = now + datetime.timedelta(hours=i)
-                        stop = start + datetime.timedelta(hours=1)
+                        stop = start + datetime.timedelta(hours=plugin.get_setting('dummy.hours',int))
                         title = "%s-%s" % (start.strftime("%Y-%m-%d %H:%M"),stop.strftime("%H:%M"))
                         start = start.strftime("%Y%m%d%H%M%S")
                         stop = stop.strftime("%Y%m%d%H%M%S")
