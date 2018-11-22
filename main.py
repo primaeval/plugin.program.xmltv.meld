@@ -338,11 +338,11 @@ def update():
                         start = start.strftime("%Y%m%d%H%M%S")
                         stop = stop.strftime("%Y%m%d%H%M%S")
                         offset = divmod(-time.timezone,3600)
-                        offset = "%02d%02d" % (abs(offset[0]),offset[1])
+                        offset_str = "%02d%02d" % (abs(offset[0]),offset[1])
                         if offset[0] >= 0:
-                            offset = "+"+offset
+                            offset = "+"+offset_str
                         else:
-                            offset = "-"+offset
+                            offset = "-"+offset_str
                         programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title lang="en">%s</title></programme>' % (start,offset,stop,offset,id,title)
                         selected_programmes.append(programme)
 
