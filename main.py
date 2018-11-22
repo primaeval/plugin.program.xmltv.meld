@@ -338,7 +338,7 @@ def update():
                         start = start.strftime("%Y%m%d%H%M%S")
                         stop = stop.strftime("%Y%m%d%H%M%S")
                         offset = divmod(-time.timezone,3600)
-                        offset = "%02d%02d" % (offset[0],offset[1])
+                        offset = "%02d%02d" % (abs(offset[0]),offset[1])
                         if offset[0] >= 0:
                             offset = "+"+offset
                         else:
