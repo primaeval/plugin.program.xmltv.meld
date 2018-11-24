@@ -17,6 +17,7 @@ import pickle
 #import lzma
 from HTMLParser import HTMLParser
 from rpc import RPC
+from bs4 import BeautifulSoup
 
 plugin = Plugin()
 big_list_view = False
@@ -1058,6 +1059,190 @@ def select_channels(url, add_all=False, remove_all=False):
     return sorted(items, key = lambda x: remove_formatting(x['label']))
 
 
+@plugin.route('/yo_select_channels/<url>')
+def yo_select_channels(url, add_all=False, remove_all=False):
+    icons = plugin.get_storage('icons')
+
+
+    data = xbmcvfs.File(url,"r").read()
+    soup = BeautifulSoup(data, "html.parser")
+    x = soup.select("#channelbar")
+    img = x[0].select("li > img")
+
+    channels = plugin.get_storage('channels')
+
+    channel_items = []
+    channel_tuple = []
+    for i in img:
+        name = i["alt"]
+        thumbnail  = i["data-original"]
+        number = i.parent.get_text().strip()
+        channel_tuple.append((number,name,thumbnail))
+        #log(number)
+        channel_items.append({
+            "label": "%s %s" % (number.strip(),name),
+            "thumbnail":thumbnail
+        })
+
+    ul = soup.select("#content ul")[0]
+    li = ul.find_all("li",recursive=False)
+    log(li)
+    ids = [l["id"] for l in li]
+    log(ids)
+
+    channel_xml = []
+    for number,name,thumbnail in channel_tuple:
+        xchannel = '<channel id="' + name + '">\n'
+        xchannel += '\t<display-name>' + escape(name) + '</display-name>\n'
+        if thumbnail:
+            xchannel += '\t<icon src="' + thumbnail + '"/>\n'
+        xchannel += '</channel>'
+        channel_xml.append(xchannel)
+
+    for c in channel_xml:
+        log(c)
+
+    programs = []
+
+    program_xml = []
+
+    index = 0
+    for id in [ids[index]]:
+        log(("id",id))
+
+        number,name,thumbnail = channel_tuple[index]
+
+        for day in range(2):
+            url = "http://danmark.yo.tv/api/GS?cid=%s&offset=+01.00&day=%s" % (id,day)
+            log(url)
+            data = requests.get(url).json()
+            #log(data)
+
+            now = datetime.datetime.now()
+            for li in data:
+                #log(li)
+                soup = BeautifulSoup(li,'html.parser')
+                a = soup.find_all('a',recursive=False)
+                last_time = datetime.datetime(year=1900,month=1,day=1)
+                for aa in a:
+                    #log(aa)
+
+                    start = aa["data-time"]
+                    #log(start)
+                    hour_minute,am_pm = start.split()
+                    hour,minute = hour_minute.split(":")
+                    hour = int(hour)
+                    minute=int(minute)
+                    if am_pm == "pm" and hour != 12:
+                        hour += 12
+                    elif am_pm == "am" and hour == 12:
+                        hour = 0
+
+                    #start = datetime.datetime.strptime(start.upper(),"%H:%M %p")
+                    #log(start)
+                    start = now.replace(hour=hour,minute=minute,second=0,microsecond=0) + datetime.timedelta(days=day)
+                    #log(start)
+                    if start < last_time:
+                        start += datetime.timedelta(days=1)
+                        #log(start)
+                    last_time = start
+
+                    flags = aa["data-flags"]
+                    stop = start
+                    match = re.search('(\d+) minutes',flags)
+                    if match:
+                        stop = start + datetime.timedelta(minutes=int(match.group(1)))
+
+                    #log(start)
+                    h2 = aa.find('h2',recursive=False)
+                    #log(h2)
+                    title = h2.get_text().strip()
+                    #log(title)
+                    h3 = aa.find('h3',recursive=False)
+                    #log(h3)
+                    description = h3.get_text().strip()
+                    #log(description)
+                    log((start,stop,title,description))
+                    tuple = (start,stop,title,description)
+                    if tuple not in programs:
+                        programs.append(tuple)
+                        start = start.strftime("%Y%m%d%H%M%S")
+                        stop = stop.strftime("%Y%m%d%H%M%S")
+                        offset = divmod(-time.timezone,3600)
+                        offset_str = "%02d%02d" % (abs(offset[0]),offset[1])
+                        if offset[0] >= 0:
+                            offset = "+"+offset_str
+                        else:
+                            offset = "-"+offset_str
+                        programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,name,title,description)
+                        log(programme)
+                        program_xml.append(programme)
+
+    log("programs")
+    for program in program_xml:
+        log(program)
+
+    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
+    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    f.write('<tv generator-info-name="xmltv Meld" >\n\n')
+    f.write('\n\n'.join(channel_xml).encode("utf8"))
+    f.write('\n\n\n')
+    for programme in program_xml:
+        f.write(programme.encode("utf8")+'\n\n')
+    f.write('\n')
+    f.write('</tv>\n')
+    f.close()
+
+
+    #log((url,data))
+    #return channel_items
+    return
+
+    match = re.findall('<channel(.*?)</channel>', decode(data), flags=(re.I|re.DOTALL))
+    if match:
+
+        for m in match:
+            id = re.search('id="(.*?)"', m)
+            if id:
+                id = htmlparser.unescape(id.group(1))
+
+            name = re.search('<display-name.*?>(.*?)</display-name', m)
+            if name:
+                name = htmlparser.unescape(name.group(1))
+
+            icon = re.search('<icon.*?src="(.*?)"', m)
+            if icon:
+                icon = icon.group(1)
+
+            if add_all == True:
+                add_channel(name.encode("utf8"), id.encode("utf8"))
+            if remove_all == True:
+                delete_channel(id.encode("utf8"))
+
+            context_items = []
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
+
+            if id in channels:
+                label = "[COLOR yellow]%s[/COLOR]" % name
+            else:
+                label = name
+
+            icons[id] = icon
+
+            items.append(
+            {
+                'label': label,
+                'path': plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")),
+                'thumbnail':icon,
+                'context_menu': context_items,
+            })
+
+    return sorted(items, key = lambda x: remove_formatting(x['label']))
+
+
 @plugin.route('/add_custom_xmltv_dialog')
 def add_custom_xmltv_dialog():
     location = xbmcgui.Dialog().select("xmltv location",["Url","File"])
@@ -1144,6 +1329,39 @@ def rytec_xmltv():
         {
             'label': label,
             'path': plugin.url_for('select_channels',url=url),
+            'thumbnail':get_icon_path('tv'),
+            'context_menu': context_items,
+        })
+
+    return items
+
+
+@plugin.route('/yo')
+def yo():
+    htmlparser = HTMLParser()
+    sources = xbmcvfs.File("http://yo.tv/","r").read()
+
+    urls = re.findall('<li><a href="(http://.*?\.yo\.tv)"  >(.*?)</a></li>',sources)
+
+    items = []
+    xmltv = plugin.get_storage('xmltv')
+    for url,description in sorted(urls,key=lambda x: x[1]):
+        description = htmlparser.unescape(description.decode("utf8"))
+
+        context_items = []
+        if url not in xmltv:
+            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description.encode("utf8"), url=url))))
+            label = description
+        else:
+            context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
+            label = "[COLOR yellow]%s[/COLOR]" % description
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
+
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('yo_select_channels',url=url),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
@@ -1721,6 +1939,13 @@ def index():
     {
         'label': "Zap",
         'path': plugin.url_for('zap'),
+        'thumbnail':get_icon_path('tv'),
+    })
+
+    items.append(
+    {
+        'label': "yo.tv",
+        'path': plugin.url_for('yo'),
         'thumbnail':get_icon_path('tv'),
     })
 
