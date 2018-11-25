@@ -289,7 +289,7 @@ class Yo:
                                     offset = "+"+offset_str
                                 else:
                                     offset = "-"+offset_str
-                                programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,id,title,description)
+                                programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,id,escape(title),escape(description))
                                 #log(programme)
                                 programme_xml.append(programme)
 
@@ -504,8 +504,8 @@ def update_zap():
     return selected_channels,selected_programmes,m3u_streams
 
 
-@plugin.route('/update')
-def update():
+@plugin.route('/update1')
+def update1():
     if plugin.get_setting('notification') == 'true':
         xbmcgui.Dialog().notification("xmltv Meld","update starting",sound=False)
 
@@ -720,6 +720,30 @@ def update():
     if plugin.get_setting('notification') == 'true':
         xbmcgui.Dialog().notification("xmltv Meld","update finished",sound=False)
     #plugin.set_resolved_url("library://video/addons.xml/")
+
+
+@plugin.route('/update')
+def update():
+
+    channel_xml,programme_xml,m3u_streams = Yo().update()
+
+    order = plugin.get_storage('order')
+
+    new_channel_xml = [channel_xml[id] for id in sorted(channel_xml, key=lambda k: order.get(k,-1))]
+
+
+    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
+    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    f.write('<tv generator-info-name="xmltv Meld" >\n\n')
+    f.write('\n\n'.join(new_channel_xml).encode("utf8"))
+    f.write('\n\n\n')
+    for programme in programme_xml:
+        f.write(programme.encode("utf8")+'\n\n')
+    f.write('\n')
+    f.write('</tv>\n')
+    f.close()
+
+
 
 
 @plugin.route('/start_update')
