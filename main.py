@@ -2398,7 +2398,7 @@ def folders_addons():
         ids[id] = id
     all_addons = []
     for type in ["xbmc.addon.video", "xbmc.addon.audio"]:
-        try: response = RPC.addons.get_addons(type=type,properties=["name", "thumbnail"])
+        try: response = RPC.addons.get_addons(type=type,properties=["name", "thumbnail","enabled"])
         except: continue
         if "addons" in response:
             found_addons = response["addons"]
@@ -2415,6 +2415,8 @@ def folders_addons():
 
     addons = sorted(addons, key=lambda addon: remove_formatting(addon['name']).lower())
     for addon in addons:
+        if addon["enabled"] != True:
+            continue
         label = remove_formatting(addon['name'])
         id = addon['addonid']
         path = "plugin://%s/" % id
