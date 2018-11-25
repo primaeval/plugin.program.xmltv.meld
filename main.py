@@ -597,7 +597,7 @@ def xml_update():
                     group_label = group+" Radio"
                     radio_flag = 'radio="true" '
                 else:
-                    group_label = groups[url]
+                    group_label = groups.get(url,"dummy")
                     radio_flag = ''
                 m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,ids.get(id,id),icon,group_label,name,streams.get(id,'http://localhost'))
 
