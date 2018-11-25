@@ -161,6 +161,20 @@ class Yo:
         self._channels[country] = channel_list
         return channel_list
 
+    def all_channels(self):
+        self.countries()
+        channels = plugin.get_storage('yo_channels')
+        all = []
+        for id,(country,name,thumbnail) in channels.items():
+            all.append({
+                "id": id,
+                "name": name,
+                "thumbnail": thumbnail,
+                "provider": "yo",
+                "country": self._countries.get(country,country),
+            })
+        return all
+
 
     def add_channel(self,country,id,name,thumbnail):
         channels = plugin.get_storage('yo_channels')
@@ -1851,8 +1865,8 @@ def zap_country(country):
 
 
 
-@plugin.route('/sort_channels')
-def sort_channels():
+@plugin.route('/sort_channels1')
+def sort_channels1():
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
     all_channels = channels.raw_dict()
@@ -1876,8 +1890,24 @@ def sort_channels():
     f.write(json.dumps(order,indent=0))
 
 
-@plugin.route('/move_channel/<id>')
-def move_channel(id):
+@plugin.route('/sort_channels')
+def sort_channels():
+    order = plugin.get_storage('order')
+
+    all_channels = Yo().all_channels()
+
+    new_order = []
+    for channel in sorted(all_channels, key = lambda k: (k["provider"],k["country"],k["name"])):
+        cid = channel["id"]
+        new_order.append(cid)
+
+    order.clear()
+    for i,cid in enumerate(new_order):
+        order[cid] = i
+
+
+@plugin.route('/move_channel1/<id>')
+def move_channel1(id):
     id = decode(id)
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
@@ -1913,9 +1943,75 @@ def move_channel(id):
 
     xbmc.executebuiltin('Container.Refresh')
 
+@plugin.route('/move_channel/<id>')
+def move_channel(id):
+    order = plugin.get_storage('order')
 
-@plugin.route('/channels')
-def channels():
+    all_channels = Yo().all_channels()
+
+    channels = []
+    name = ""
+    new_order = []
+    for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
+        label = "%s - [%s] - %s" % (channel["name"],channel["provider"],channel["country"])
+        cid = channel["id"]
+        thumbnail = channel["thumbnail"]
+        channels.append((cid,label))
+        if cid == id:
+            name = label
+        new_order.append(cid)
+
+    labels = [c[1] for c in channels]
+
+    index = xbmcgui.Dialog().select('%s: Move After?' % name, labels)
+    if index == -1:
+        return
+
+    oldindex = new_order.index(id)
+    new_order.insert(index+1, new_order.pop(oldindex))
+    order.clear()
+    for i,cid in enumerate(new_order):
+        order[cid] = i
+
+    '''
+    #id = decode(id)
+    #channels = plugin.get_storage('channels')
+    #zap_channels = plugin.get_storage('zap_channels')
+
+    #all_channels = dict(channels.items())
+    #all_channels.update(dict(zap_channels.items()))
+
+    #path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            order = json.loads(data)
+        else:
+            order = []
+        f.close()
+    else:
+        order = []
+
+    sorted_channels_names = [all_channels[x] for x in order]
+
+    dialog = xbmcgui.Dialog()
+
+    index = dialog.select('%s: Move After?' % all_channels[id], sorted_channels_names)
+    if index == -1:
+        return
+
+    oldindex = order.index(id)
+    order.insert(index+1, order.pop(oldindex))
+
+    f = xbmcvfs.File(path,'w')
+    f.write(json.dumps(order,indent=0))
+
+    xbmc.executebuiltin('Container.Refresh')
+    '''
+
+@plugin.route('/channels1')
+def channels1():
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
     names = plugin.get_storage('names')
@@ -1971,6 +2067,93 @@ def channels():
         })
 
     return items
+
+
+@plugin.route('/channels')
+def channels():
+    order = plugin.get_storage('order')
+
+    all_channels = Yo().all_channels()
+
+    items = []
+
+    for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
+        label = "%s - [%s] - %s" % (channel["name"],channel["provider"],channel["country"])
+        id = channel["id"]
+        thumbnail = channel["thumbnail"]
+
+        context_items = []
+
+        items.append(
+        {
+            'label': label,
+            'path': plugin.url_for('move_channel',id=id.encode("utf8")),
+            'thumbnail': thumbnail, #icons.get(id, get_icon_path('tv')),
+            'context_menu': context_items,
+        })
+
+    return items
+
+    '''
+    channels = plugin.get_storage('channels')
+    zap_channels = plugin.get_storage('zap_channels')
+    yo_channels = plugin.get_storage('yo_channels')
+    names = plugin.get_storage('names')
+
+    all_channels = dict(channels.items())
+    all_channels.update(dict(zap_channels.items()))
+    all_channels.update(dict(yo_channels.items()))
+
+    icons = plugin.get_storage('icons')
+
+    path = profile()+'id_order.json'
+    if xbmcvfs.exists(path):
+        f = xbmcvfs.File(path,'r')
+        data = f.read()
+        if data:
+            order = json.loads(data)
+        else:
+            order = []
+        f.close()
+    else:
+        order = []
+
+    items = []
+    for id in order:
+        name = all_channels.get(id)
+        if not name:
+            continue
+        name = names.get(id,name)
+
+        context_items = []
+        if id in zap_channels:
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Zap Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_zap_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_zap_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_radio_stream, id=id.encode("utf8")))))
+        if id in channels:
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
+
+        items.append(
+        {
+            'label': name,
+            'path': plugin.url_for('move_channel',id=id.encode("utf8")),
+            'thumbnail': icons.get(id, get_icon_path('tv')),
+            'context_menu': context_items,
+        })
+
+    return items
+    '''
+
 
 @plugin.route('/folders_paths/<id>/<path>')
 def folders_paths(id,path):
