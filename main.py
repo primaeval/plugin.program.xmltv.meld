@@ -1699,13 +1699,13 @@ def custom_xmltv():
             context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % name
         context_items.append(("[COLOR yellow]Remove xmltv url[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_custom_xmltv, url=url))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8"),description=name.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8"),description=name.encode("utf8")))))
 
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('select_channels',url=url),
+            'path': plugin.url_for('select_channels',url=url,description=name.encode("utf8")),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
