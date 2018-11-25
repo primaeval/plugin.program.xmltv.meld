@@ -204,6 +204,7 @@ class Yo:
 
     def update(self):
         yo_channels = plugin.get_storage('yo_channels')
+        streams = plugin.get_storage('streams')
 
         self.countries()
 
@@ -226,7 +227,7 @@ class Yo:
                 channel_xml[id] = xchannel
 
                 radio_flag = ''
-                m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,id,thumbnail,self._countries[country],name,'http://localhost')
+                m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,id,thumbnail,self._countries[country],name,streams.get(id,'http://localhost'))
 
 
         programmes = []
@@ -987,10 +988,10 @@ def radio_stream_dialog(id,channels):
 
 @plugin.route('/channel_stream/<id>')
 def channel_stream(id):
-    id = decode(id)
+    #id = decode(id)
 
-    channels = plugin.get_storage('channels')
-    channel_stream_dialog(id,channels)
+    channels = plugin.get_storage('yo_channels')
+    channel_stream_dialog(id,channels[id])
 
 
 @plugin.route('/zap_channel_stream/<id>')
@@ -998,13 +999,15 @@ def zap_channel_stream(id):
     id = decode(id)
 
     channels = plugin.get_storage('zap_channels')
-    channel_stream_dialog(id,channels)
+    channel_stream_dialog(id,channels[id])
 
 
-def channel_stream_dialog(id,channels):
+def channel_stream_dialog(id,channel):
+    log(channel)
+    country,name,thumbnail = channel
     streams = plugin.get_storage('streams')
     names = plugin.get_storage('names')
-    name = channels[id]
+    #name = channel["name"]
     new_name = names.get(id,name)
     ids = plugin.get_storage('ids')
     new_id = ids.get(id,id)
@@ -1043,10 +1046,10 @@ def channel_stream_dialog(id,channels):
 
 @plugin.route('/guess_channel_stream/<id>')
 def guess_channel_stream(id):
-    id = decode(id)
+    #id = decode(id)
 
-    channels = plugin.get_storage('channels')
-    return guess_channel_stream_dialog(id,channels)
+    channels = plugin.get_storage('yo_channels')
+    return guess_channel_stream_dialog(id,channels[id])
 
 
 @plugin.route('/guess_zap_channel_stream/<id>')
@@ -1057,12 +1060,14 @@ def guess_zap_channel_stream(id):
     return guess_channel_stream_dialog(id,channels)
 
 
-def guess_channel_stream_dialog(id,channels):
+def guess_channel_stream_dialog(id,channel):
+    country,name,thumbnail = channel
+
     streams = plugin.get_storage('streams')
     m3us = plugin.get_storage('subscribe_m3us')
     m3u_contents = plugin.get_storage('m3u_contents', TTL=60)
     names = plugin.get_storage('names')
-    name = channels[id]
+    #name = channels[id]
     new_name = names.get(id,name)
     ids = plugin.get_storage('ids')
     new_id = ids.get(id,id)
@@ -1075,7 +1080,9 @@ def guess_channel_stream_dialog(id,channels):
     other = []
     for folder in folders:
         addon = folders[folder]
-        addon_label = paths["plugin://"+addon]
+        log((addon,folder,paths))
+        #addon_label = paths["plugin://"+addon]
+        addon_label = xbmcaddon.Addon(addon).getAddonInfo('name')
         folder_label = paths[folder]
         dirs,files = get_folder(folder)
         for file in files:
@@ -2119,6 +2126,13 @@ def channels():
         thumbnail = channel["thumbnail"]
 
         context_items = []
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8")))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
 
         items.append(
         {
@@ -2439,7 +2453,7 @@ def index():
         'thumbnail':get_icon_path('tv'),
         'context_menu': context_items,
     })
-
+    '''
     items.append(
     {
         'label': "koditvepg.com GONE PAID",
@@ -2447,7 +2461,7 @@ def index():
         'thumbnail':get_icon_path('tv'),
         'context_menu': context_items,
     })
-
+    '''
     items.append(
     {
         'label': "Zap",
