@@ -743,6 +743,16 @@ def update():
     f.write('</tv>\n')
     f.close()
 
+    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/channels.m3u8",'w')
+    f.write('#EXTM3U\n\n')
+    for id in sorted(m3u_streams, key=lambda k: order.get(k,-1)):
+        line = m3u_streams[id]
+        if line is not None:
+            line = "%s\n" % line
+            f.write(line.encode("utf8"))
+    f.write('\n')
+    f.close()
+
 
 
 
