@@ -211,22 +211,22 @@ class Yo:
         for id,(country,name,thumbnail) in yo_channels.iteritems():
             countries[country].append((name,id,thumbnail))
 
-        channel_xml = []
-        m3u_streams = []
+        channel_xml = {}
+        m3u_streams = {}
 
 
         for country in countries:
             for name,id,thumbnail in countries[country]:
 
-                xchannel = '<channel id="yo.%s">\n' % (id)
+                xchannel = '<channel id="%s">\n' % (id)
                 xchannel += '\t<display-name>' + escape(name) + '</display-name>\n'
                 if thumbnail:
                     xchannel += '\t<icon src="' + thumbnail + '"/>\n'
                 xchannel += '</channel>'
-                channel_xml.append(xchannel)
+                channel_xml[id] = xchannel
 
                 radio_flag = ''
-                m3u_streams.append('#EXTINF:-1 %stvg-name="%s" tvg-id="yo.%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,id,thumbnail,self._countries[country],name,'http://localhost'))
+                m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,id,thumbnail,self._countries[country],name,'http://localhost')
 
 
         programmes = []
@@ -289,7 +289,7 @@ class Yo:
                                     offset = "+"+offset_str
                                 else:
                                     offset = "-"+offset_str
-                                programme = '<programme start="%s %s" stop="%s %s" channel="yo.%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,id,title,description)
+                                programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,id,title,description)
                                 #log(programme)
                                 programme_xml.append(programme)
 
@@ -1953,7 +1953,7 @@ def move_channel(id):
     name = ""
     new_order = []
     for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
-        label = "%s - [%s] - %s" % (channel["name"],channel["provider"],channel["country"])
+        label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),channel["name"],channel["provider"],channel["country"])
         cid = channel["id"]
         thumbnail = channel["thumbnail"]
         channels.append((cid,label))
@@ -1967,8 +1967,10 @@ def move_channel(id):
     if index == -1:
         return
 
+    log(new_order)
     oldindex = new_order.index(id)
     new_order.insert(index+1, new_order.pop(oldindex))
+    log(new_order)
     order.clear()
     for i,cid in enumerate(new_order):
         order[cid] = i
@@ -2078,7 +2080,7 @@ def channels():
     items = []
 
     for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
-        label = "%s - [%s] - %s" % (channel["name"],channel["provider"],channel["country"])
+        label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),channel["name"],channel["provider"],channel["country"])
         id = channel["id"]
         thumbnail = channel["thumbnail"]
 
