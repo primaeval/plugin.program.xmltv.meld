@@ -509,8 +509,7 @@ def update_zap():
 
 @plugin.route('/xml_update')
 def xml_update():
-    if plugin.get_setting('notification') == 'true':
-        xbmcgui.Dialog().notification("xmltv Meld","update starting",sound=False)
+
 
     #xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('xml_channels')
@@ -637,6 +636,8 @@ def xml_update():
                         programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title lang="en">%s</title></programme>' % (start,offset,stop,offset,id,title)
                         selected_programmes.append(programme)
 
+    return selected_channels, selected_programmes, m3u_streams
+
 
     #zap_channels, zap_programmes, zap_m3u_streams = update_zap()
     #yo_channels, yo_programmes, yo_m3u_streams = update_yo()
@@ -737,9 +738,21 @@ def xml_update():
 
 @plugin.route('/update')
 def update():
+    if plugin.get_setting('notification') == 'true':
+        xbmcgui.Dialog().notification("xmltv Meld","update starting",sound=False)
 
-    #channel_xml,programme_xml,m3u_streams = Yo().update()
-    channel_xml,programme_xml,m3u_streams = xml_update()
+    yo_channel_xml,yo_programme_xml,yo_m3u_streams = Yo().update()
+    xml_channel_xml,xml_programme_xml,xml_m3u_streams = xml_update()
+    zap_channels, zap_programmes, zap_m3u_streams = update_zap()
+    log((zap_channels, zap_programmes, zap_m3u_streams))
+
+    channel_xml = yo_channel_xml
+    channel_xml.update(xml_channel_xml)
+    channel_xml.update(zap_channels)
+    programme_xml = yo_programme_xml + xml_programme_xml + zap_programmes
+    m3u_streams = yo_m3u_streams
+    m3u_streams.update(xml_m3u_streams)
+    m3u_streams.update(zap_m3u_streams)
 
     order = plugin.get_storage('order')
 
@@ -767,6 +780,8 @@ def update():
     f.write('\n')
     f.close()
 
+    if plugin.get_setting('notification') == 'true':
+        xbmcgui.Dialog().notification("xmltv Meld","update finished",sound=False)
 
 
 
@@ -1317,15 +1332,15 @@ def rename_zap_channel(id):
     xbmc.executebuiltin('Container.Refresh')
 
 
-@plugin.route('/add_zap_channel/<name>/<id>')
-def add_zap_channel(name,id):
-    name = name.decode("utf")
-    id = decode(id)
+@plugin.route('/add_zap_channel/<name>/<id>/<country>/<thumbnail>')
+def add_zap_channel(name,id,country,thumbnail):
+    #name = name.decode("utf")
+    #id = decode(id)
 
     channels = plugin.get_storage('zap_channels')
-    channels[id] = name
+    channels[id] = (name,id,country,thumbnail)
 
-    add_json_channel(id)
+    #add_json_channel(id)
     #xbmc.executebuiltin('Container.Refresh')
 
 
@@ -1797,26 +1812,28 @@ def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False
         icon = "http:" + channel.get('thumbnail').replace('?w=55','')
 
         if add_all == True:
-            add_zap_channel(name.encode("utf8"), id.encode("utf8"))
+            add_zap_channel(name.encode("utf8"), id.encode("utf8"),country=country,thumbnail=icon)
         if remove_all == True:
             delete_zap_channel(id.encode("utf8"))
 
         context_items = []
         context_items.append(("[COLOR yellow]Remove channel[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_zap_channels',country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_zap_channels, country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_zap_channels',country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_zap_channels, country=country, zipcode=zipcode, device=device, lineup=lineup, headend=headend))))
 
         if id in zap_channels:
             label = "[COLOR yellow]%s[/COLOR]" % name
+            path = plugin.url_for(delete_zap_channel, id=id.encode("utf8"))
         else:
             label = name
+            path = plugin.url_for('add_zap_channel',name=name.encode("utf8"), id=id.encode("utf8"),country=country,thumbnail=icon)
 
         icons[id] = icon
 
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('add_zap_channel',name=name.encode("utf8"), id=id.encode("utf8")),
+            'path': path, #plugin.url_for('add_zap_channel',name=name.encode("utf8"), id=id.encode("utf8")),
             'thumbnail':icon,
             'context_menu': context_items,
         })
@@ -2006,7 +2023,7 @@ def move_channel1(id):
 def move_channel(id):
     order = plugin.get_storage('order')
 
-    all_channels = Yo().all_channels() + xml_all_channels()
+    all_channels = Yo().all_channels() + xml_all_channels() + zap_all_channels()
 
     channels = []
     name = ""
@@ -2129,6 +2146,19 @@ def channels1():
 
     return items
 
+def zap_all_channels():
+    channels = plugin.get_storage('zap_channels')
+    all = []
+    for id,(name,id,country,thumbnail) in channels.items():
+        all.append({
+            "id": id,
+            "name": name,
+            "thumbnail": thumbnail,
+            "provider": "zap",
+            "country": country,
+        })
+    return all
+
 def xml_all_channels():
     channels = plugin.get_storage('xml_channels')
     all = []
@@ -2147,7 +2177,7 @@ def channels():
     order = plugin.get_storage('order')
     names = plugin.get_storage('names')
 
-    all_channels = Yo().all_channels() + xml_all_channels()
+    all_channels = Yo().all_channels() + xml_all_channels() + zap_all_channels()
 
     items = []
 
