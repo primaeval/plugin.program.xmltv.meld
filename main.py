@@ -163,7 +163,7 @@ class Yo:
 
     def all_channels(self):
         self.countries()
-        channels = plugin.get_storage('all_channels')
+        channels = plugin.get_storage('yol_channels')
         all = []
         for id,(country,name,thumbnail) in channels.items():
             all.append({
@@ -177,25 +177,25 @@ class Yo:
 
 
     def add_channel(self,country,id,name,thumbnail):
-        channels = plugin.get_storage('all_channels')
+        channels = plugin.get_storage('yol_channels')
         channels[id] = (country,name,thumbnail)
 
 
     def delete_channel(self,id):
-        channels = plugin.get_storage('all_channels')
+        channels = plugin.get_storage('yol_channels')
         if id in channels:
             del channels[id]
 
 
     def add_all_channels(self,country):
-        channels = plugin.get_storage('all_channels')
+        channels = plugin.get_storage('yol_channels')
 
         for c in self.channels(country):
             self.add_channel(country,c["id"],c["name"],c["thumbnail"])
 
 
     def delete_all_channels(self,country):
-        channels = plugin.get_storage('all_channels')
+        channels = plugin.get_storage('yol_channels')
         for id,(ccountry,name,thumbnail) in channels.items():
             #ccountry,name,thumbnail = channels[id]
             if country == ccountry:
@@ -203,7 +203,7 @@ class Yo:
 
 
     def update(self):
-        yo_channels = plugin.get_storage('all_channels')
+        yo_channels = plugin.get_storage('yol_channels')
         streams = plugin.get_storage('streams')
         names = plugin.get_storage('names')
         ids = plugin.get_storage('ids')
@@ -322,7 +322,7 @@ class Yo:
 
 @plugin.route('/yo')
 def yo():
-    yo_channels = plugin.get_storage('all_channels')
+    yo_channels = plugin.get_storage('yol_channels')
     channel_countries = {yo_channels[x][0] for x in yo_channels}
 
     countries = Yo().countries()
@@ -350,7 +350,7 @@ def yo():
 
 @plugin.route('/yo_select_channels/<country>')
 def yo_select_channels(country):
-    yo_channels = plugin.get_storage('all_channels')
+    yo_channels = plugin.get_storage('yol_channels')
     channels = Yo().channels(country)
 
     items = []
@@ -913,7 +913,7 @@ def delete_channel(id):
 
 @plugin.route('/yo_add_channel1/<name>/<country>/<number>/<thumbnail>')
 def yo_add_channel1(name,country,number,thumbnail):
-    yo_channels = plugin.get_storage('all_channels')
+    yo_channels = plugin.get_storage('yol_channels')
     yo_channels[(name,country,number)] = thumbnail
 
     id = "%s %s %s" % (name,country,number)
@@ -925,7 +925,7 @@ def yo_add_channel1(name,country,number,thumbnail):
 def yo_delete_channel1(id):
     id = decode(id)
 
-    yo_channels = plugin.get_storage('all_channels')
+    yo_channels = plugin.get_storage('yol_channels')
     if id in yo_channels:
         del yo_channels[id]
 
@@ -946,14 +946,14 @@ def rename_channel_id(id):
         del ids[id]
 
 
-@plugin.route('/rename_channel/<id>')
-def rename_channel(id):
-    id = decode(id)
+@plugin.route('/rename_channel/<id>/<name>')
+def rename_channel(id,name):
+    #id = decode(id)
 
-    channels = plugin.get_storage('all_channels')
+    #all_channels = Yo().all_channels() + xml_all_channels()
     names = plugin.get_storage('names')
     #name = channels[id]
-    country,name,thumbnail = channels[id]
+    #country,name,thumbnail = all_channels[id]
     new_name = names.get(id,name)
 
     new_name = xbmcgui.Dialog().input(name,new_name)
@@ -993,7 +993,7 @@ def radio_stream_dialog(id,channels):
 def channel_stream(id):
     #id = decode(id)
 
-    channels = plugin.get_storage('all_channels')
+    channels = plugin.get_storage('yol_channels')
     channel_stream_dialog(id,channels[id])
 
 
@@ -1051,7 +1051,7 @@ def channel_stream_dialog(id,channel):
 def guess_channel_stream(id):
     #id = decode(id)
 
-    channels = plugin.get_storage('all_channels')
+    channels = plugin.get_storage('yol_channels')
     return guess_channel_stream_dialog(id,channels[id])
 
 
@@ -1193,7 +1193,7 @@ def guess_streams_function(missing=False):
 def paste_channel_stream(id):
     id = decode(id)
 
-    channels = plugin.get_storage('all_channels')
+    channels = plugin.get_storage('yol_channels')
     paste_channel_stream_dialog(id,channels)
 
 
@@ -1425,7 +1425,7 @@ def tree(): return collections.defaultdict(tree)
 def update_yo1():
     icons = plugin.get_storage('icons')
 
-    yo_channels = plugin.get_storage('all_channels')
+    yo_channels = plugin.get_storage('yol_channels')
 
     yo = tree()
     for (name,country,number),thumbnail in yo_channels.iteritems():
@@ -1995,7 +1995,7 @@ def move_channel1(id):
 def move_channel(id):
     order = plugin.get_storage('order')
 
-    all_channels = Yo().all_channels()
+    all_channels = Yo().all_channels() + xml_all_channels()
 
     channels = []
     name = ""
@@ -2118,13 +2118,25 @@ def channels1():
 
     return items
 
+def xml_all_channels():
+    channels = plugin.get_storage('xml_channels')
+    all = []
+    for id,(url,description,name,id,thumbnail) in channels.items():
+        all.append({
+            "id": id,
+            "name": name,
+            "thumbnail": thumbnail,
+            "provider": "xml",
+            "country": description,
+        })
+    return all
 
 @plugin.route('/channels')
 def channels():
     order = plugin.get_storage('order')
     names = plugin.get_storage('names')
 
-    all_channels = Yo().all_channels()
+    all_channels = Yo().all_channels() + xml_all_channels()
 
     items = []
 
@@ -2136,7 +2148,7 @@ def channels():
         context_items = []
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
@@ -2155,7 +2167,7 @@ def channels():
     '''
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
-    yo_channels = plugin.get_storage('all_channels')
+    yo_channels = plugin.get_storage('yol_channels')
     names = plugin.get_storage('names')
 
     all_channels = dict(channels.items())
