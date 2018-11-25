@@ -163,7 +163,7 @@ class Yo:
 
     def all_channels(self):
         self.countries()
-        channels = plugin.get_storage('yo_channels')
+        channels = plugin.get_storage('all_channels')
         all = []
         for id,(country,name,thumbnail) in channels.items():
             all.append({
@@ -177,25 +177,25 @@ class Yo:
 
 
     def add_channel(self,country,id,name,thumbnail):
-        channels = plugin.get_storage('yo_channels')
+        channels = plugin.get_storage('all_channels')
         channels[id] = (country,name,thumbnail)
 
 
     def delete_channel(self,id):
-        channels = plugin.get_storage('yo_channels')
+        channels = plugin.get_storage('all_channels')
         if id in channels:
             del channels[id]
 
 
     def add_all_channels(self,country):
-        channels = plugin.get_storage('yo_channels')
+        channels = plugin.get_storage('all_channels')
 
         for c in self.channels(country):
             self.add_channel(country,c["id"],c["name"],c["thumbnail"])
 
 
     def delete_all_channels(self,country):
-        channels = plugin.get_storage('yo_channels')
+        channels = plugin.get_storage('all_channels')
         for id,(ccountry,name,thumbnail) in channels.items():
             #ccountry,name,thumbnail = channels[id]
             if country == ccountry:
@@ -203,7 +203,7 @@ class Yo:
 
 
     def update(self):
-        yo_channels = plugin.get_storage('yo_channels')
+        yo_channels = plugin.get_storage('all_channels')
         streams = plugin.get_storage('streams')
         names = plugin.get_storage('names')
         ids = plugin.get_storage('ids')
@@ -322,7 +322,7 @@ class Yo:
 
 @plugin.route('/yo')
 def yo():
-    yo_channels = plugin.get_storage('yo_channels')
+    yo_channels = plugin.get_storage('all_channels')
     channel_countries = {yo_channels[x][0] for x in yo_channels}
 
     countries = Yo().countries()
@@ -350,7 +350,7 @@ def yo():
 
 @plugin.route('/yo_select_channels/<country>')
 def yo_select_channels(country):
-    yo_channels = plugin.get_storage('yo_channels')
+    yo_channels = plugin.get_storage('all_channels')
     channels = Yo().channels(country)
 
     items = []
@@ -888,15 +888,15 @@ def remove_dummy_channel(url):
         del names[id]
 
 
-@plugin.route('/add_channel/<name>/<id>')
-def add_channel(name,id):
-    name = decode(name)
-    id = decode(id)
+@plugin.route('/add_channel/<url>/<description>/<name>/<id>/<thumbnail>')
+def add_channel(url,description,name,id,thumbnail):
+    #name = decode(name)
+    #id = decode(id)
 
-    channels = plugin.get_storage('channels')
-    channels[id] = name
+    channels = plugin.get_storage('xml_channels')
+    channels[id] = (url,description,name,id,thumbnail)
 
-    add_json_channel(id)
+    #add_json_channel(id)
     #xbmc.executebuiltin('Container.Refresh')
 
 
@@ -904,16 +904,16 @@ def add_channel(name,id):
 def delete_channel(id):
     id = decode(id)
 
-    channels = plugin.get_storage('yo_channels')
+    channels = plugin.get_storage('xml_channels')
     if id in channels:
         del channels[id]
 
-    delete_json_channel(id)
+    #delete_json_channel(id)
 
 
 @plugin.route('/yo_add_channel1/<name>/<country>/<number>/<thumbnail>')
 def yo_add_channel1(name,country,number,thumbnail):
-    yo_channels = plugin.get_storage('yo_channels')
+    yo_channels = plugin.get_storage('all_channels')
     yo_channels[(name,country,number)] = thumbnail
 
     id = "%s %s %s" % (name,country,number)
@@ -925,7 +925,7 @@ def yo_add_channel1(name,country,number,thumbnail):
 def yo_delete_channel1(id):
     id = decode(id)
 
-    yo_channels = plugin.get_storage('yo_channels')
+    yo_channels = plugin.get_storage('all_channels')
     if id in yo_channels:
         del yo_channels[id]
 
@@ -950,7 +950,7 @@ def rename_channel_id(id):
 def rename_channel(id):
     id = decode(id)
 
-    channels = plugin.get_storage('yo_channels')
+    channels = plugin.get_storage('all_channels')
     names = plugin.get_storage('names')
     #name = channels[id]
     country,name,thumbnail = channels[id]
@@ -993,7 +993,7 @@ def radio_stream_dialog(id,channels):
 def channel_stream(id):
     #id = decode(id)
 
-    channels = plugin.get_storage('yo_channels')
+    channels = plugin.get_storage('all_channels')
     channel_stream_dialog(id,channels[id])
 
 
@@ -1051,7 +1051,7 @@ def channel_stream_dialog(id,channel):
 def guess_channel_stream(id):
     #id = decode(id)
 
-    channels = plugin.get_storage('yo_channels')
+    channels = plugin.get_storage('all_channels')
     return guess_channel_stream_dialog(id,channels[id])
 
 
@@ -1193,7 +1193,7 @@ def guess_streams_function(missing=False):
 def paste_channel_stream(id):
     id = decode(id)
 
-    channels = plugin.get_storage('yo_channels')
+    channels = plugin.get_storage('all_channels')
     paste_channel_stream_dialog(id,channels)
 
 
@@ -1318,14 +1318,14 @@ def add_zap_channel(name,id):
     #xbmc.executebuiltin('Container.Refresh')
 
 
-@plugin.route('/add_all_channels/<url>')
-def add_all_channels(url):
-    select_channels(url,add_all=True)
+@plugin.route('/add_all_channels/<url>/<description>')
+def add_all_channels(url,description):
+    select_channels(url,description,add_all=True)
 
 
-@plugin.route('/delete_all_channels/<url>')
-def delete_all_channels(url):
-    select_channels(url,remove_all=True)
+@plugin.route('/delete_all_channels/<url>/<description>')
+def delete_all_channels(url,description):
+    select_channels(url,description,remove_all=True)
 
 
 @plugin.route('/yo_add_all_channels1/<url>')
@@ -1337,20 +1337,16 @@ def yo_add_all_channels1(url):
 def yo_delete_all_channels1(url):
     yo_select_channels(url,remove_all=True)
 
-@plugin.route('/select_channels/<url>')
-def select_channels(url, add_all=False, remove_all=False):
-    icons = plugin.get_storage('icons')
+
+@plugin.route('/select_channels/<url>/<description>')
+def select_channels(url, description, add_all=False, remove_all=False):
+    #icons = plugin.get_storage('icons')
 
     if '\\' in url:
         url = url.replace('\\','/')
 
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
     success = xbmcvfs.copy(url,filename)
-    if not success:
-        url2 = url.replace('koditvepg.com','koditvepg2.com')
-        success = xbmcvfs.copy(url2,filename)
-        if not success:
-            return
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
@@ -1371,7 +1367,7 @@ def select_channels(url, add_all=False, remove_all=False):
     htmlparser = HTMLParser()
 
     items = []
-    channels = plugin.get_storage('channels')
+    channels = plugin.get_storage('xml_channels')
 
     match = re.findall('<channel(.*?)</channel>', decode(data), flags=(re.I|re.DOTALL))
     if match:
@@ -1388,29 +1384,33 @@ def select_channels(url, add_all=False, remove_all=False):
             icon = re.search('<icon.*?src="(.*?)"', m)
             if icon:
                 icon = icon.group(1)
+            else:
+                icon = get_icon_path('tv')
 
             if add_all == True:
-                add_channel(name.encode("utf8"), id.encode("utf8"))
+                add_channel(url=url,description=description.encode("utf8"),name=name.encode("utf8"), id=id.encode("utf8"),thumbnail=icon)
             if remove_all == True:
                 delete_channel(id.encode("utf8"))
 
             context_items = []
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
+            #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")))))
+            #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+            #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
+            #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
 
             if id in channels:
                 label = "[COLOR yellow]%s[/COLOR]" % name
+                path = plugin.url_for(delete_channel, id=id.encode("utf8"))
             else:
                 label = name
+                path = plugin.url_for('add_channel',url=url,description=description.encode("utf8"),name=name.encode("utf8"), id=id.encode("utf8"),thumbnail=icon)
 
-            icons[id] = icon
+            #icons[id] = icon
 
             items.append(
             {
                 'label': label,
-                'path': plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")),
+                'path': path, #plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")),
                 'thumbnail':icon,
                 'context_menu': context_items,
             })
@@ -1425,7 +1425,7 @@ def tree(): return collections.defaultdict(tree)
 def update_yo1():
     icons = plugin.get_storage('icons')
 
-    yo_channels = plugin.get_storage('yo_channels')
+    yo_channels = plugin.get_storage('all_channels')
 
     yo = tree()
     for (name,country,number),thumbnail in yo_channels.iteritems():
@@ -1688,29 +1688,33 @@ def custom_xmltv():
 
 @plugin.route('/rytec_xmltv')
 def rytec_xmltv():
+    xml_channels = plugin.get_storage("xml_channels")
+    xml_urls = {xml_channels[x][0] for x in xml_channels}
+    #log(xml_urls)
 
     sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml","r").read()
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
     items = []
-    xmltv = plugin.get_storage('xmltv')
+    #xmltv = plugin.get_storage('xmltv')
     for channels,description,url in sorted(urls,key=lambda x: x[1]):
 
         context_items = []
-        if url not in xmltv:
-            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
+        #log(url)
+        if url not in xml_urls:
+            #context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
             label = description
         else:
-            context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
+            #context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
             label = "[COLOR yellow]%s[/COLOR]" % description
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',description=description.encode("utf8"),url=url.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels,description=description.encode("utf8"), url=url.encode("utf8")))))
 
         items.append(
         {
             'label': label,
-            'path': plugin.url_for('select_channels',url=url),
+            'path': plugin.url_for('select_channels',url=url,description=description.encode("utf8")),
             'thumbnail':get_icon_path('tv'),
             'context_menu': context_items,
         })
@@ -2151,7 +2155,7 @@ def channels():
     '''
     channels = plugin.get_storage('channels')
     zap_channels = plugin.get_storage('zap_channels')
-    yo_channels = plugin.get_storage('yo_channels')
+    yo_channels = plugin.get_storage('all_channels')
     names = plugin.get_storage('names')
 
     all_channels = dict(channels.items())
