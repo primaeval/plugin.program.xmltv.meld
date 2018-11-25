@@ -123,17 +123,16 @@ class Yo:
         self._channels = {}
         self._countries = {}
 
+
     def countries(self):
         htmlparser = HTMLParser()
         sources = xbmcvfs.File("http://yo.tv/","r").read()
 
         match = re.findall('<li><a href="http://(.*?)\.yo\.tv"  >(.*?)</a></li>',sources)
-        #for m in match:
-            #log(m)
-
         self._countries = {m[0]:htmlparser.unescape(m[1].decode("utf8")) for m in match}
 
         return sorted(self._countries.items(), key=operator.itemgetter(1))
+
 
     def channels(self,country):
         url = "http://%s.yo.tv" % country
@@ -156,39 +155,55 @@ class Yo:
             channel_list.append({
                 "name" : name,
                 "id": ids[i],
-                #"number" : int(number or -1),
                 "thumbnail" : thumbnail,
 
             })
         self._channels[country] = channel_list
         return channel_list
 
+
     def add_channel(self,country,id,name,thumbnail):
         channels = plugin.get_storage('yo_channels')
-        #id = json.dumps((country,id,number))
         channels[id] = (country,name,thumbnail)
+
+
+    def delete_channel(self,id):
+        channels = plugin.get_storage('yo_channels')
+        if id in channels:
+            del channels[id]
+
+
+    def add_all_channels(self,country):
+        channels = plugin.get_storage('yo_channels')
+
+        for c in self.channels(country):
+            self.add_channel(country,c["id"],c["name"],c["thumbnail"])
+
+
+    def delete_all_channels(self,country):
+        channels = plugin.get_storage('yo_channels')
+        for id,(ccountry,name,thumbnail) in channels.items():
+            #ccountry,name,thumbnail = channels[id]
+            if country == ccountry:
+                del channels[id]
+
 
     def update(self):
         yo_channels = plugin.get_storage('yo_channels')
 
+        self.countries()
+
         countries = collections.defaultdict(list)
         for id,(country,name,thumbnail) in yo_channels.iteritems():
-            #country,name,number = json.loads(id)
             countries[country].append((name,id,thumbnail))
-
-
-        #log(yo)
-        #return
 
         channel_xml = []
         m3u_streams = []
 
-        #for url in urls:
-            #country = self.country(url)
+
         for country in countries:
             for name,id,thumbnail in countries[country]:
 
-        #for (name,country,number),thumbnail in yo_channels.iteritems():
                 xchannel = '<channel id="yo.%s">\n' % (id)
                 xchannel += '\t<display-name>' + escape(name) + '</display-name>\n'
                 if thumbnail:
@@ -197,63 +212,13 @@ class Yo:
                 channel_xml.append(xchannel)
 
                 radio_flag = ''
-                m3u_streams.append('#EXTINF:-1 %stvg-name="%s" tvg-id="yo.%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,id,thumbnail,country,name,'http://localhost'))
+                m3u_streams.append('#EXTINF:-1 %stvg-name="%s" tvg-id="yo.%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,id,thumbnail,self._countries[country],name,'http://localhost'))
 
-        for c in channel_xml:
-            log(c)
 
-        #return
-
+        programmes = []
+        programme_xml = []
         for country in countries:
-        #for url in urls:
-            #country = self.country(url)
-
-
-            '''
-            #country = re.search('//(.*?).yo.tv',url).group(1)
-            url = "http://%s.yo.tv" % country
-
-            data = xbmcvfs.File(url,"r").read()
-            soup = BeautifulSoup(data, "html.parser")
-            x = soup.select("#channelbar")
-            img = x[0].select("li > img")
-
-            #channels = plugin.get_storage('channels')
-
-            channel_items = []
-            channel_tuple = []
-            for i in img:
-                name = i["alt"]
-                thumbnail  = i["data-original"]
-                number = i.parent.get_text().strip()
-                channel_tuple.append((number,name,thumbnail))
-                #log(number)
-                #channel_items.append({
-                #    "label": "%s %s" % (number.strip(),name),
-                #    "thumbnail":thumbnail
-                #})
-
-
-            ul = soup.select("#content ul")[0]
-            li = ul.find_all("li",recursive=False)
-            log(li)
-            ids = [l["id"] for l in li]
-            log(ids)
-            '''
-            #channels = self.channels(country)
-
-            programmes = []
-
-            programme_xml = []
-
-            index = 0
             for name,id,thumbnail in countries[country]:
-            #for id in [ids[index]]:
-                #id = ids[int(number)-1]
-                #log(("id",id))
-
-                #number,name,thumbnail = channel_tuple[index]
-
                 for day in range(2):
                     url = "http://%s.yo.tv/api/GS?cid=%s&offset=+01.00&day=%s" % (country,id,day)
                     log(url)
@@ -267,8 +232,6 @@ class Yo:
                         a = soup.find_all('a',recursive=False)
                         last_time = datetime.datetime(year=1900,month=1,day=1)
                         for aa in a:
-                            #log(aa)
-
                             start = aa["data-time"]
                             #log(start)
                             hour_minute,am_pm = start.split()
@@ -280,13 +243,9 @@ class Yo:
                             elif am_pm == "am" and hour == 12:
                                 hour = 0
 
-                            #start = datetime.datetime.strptime(start.upper(),"%H:%M %p")
-                            #log(start)
                             start = now.replace(hour=hour,minute=minute,second=0,microsecond=0) + datetime.timedelta(days=day)
-                            #log(start)
                             if start < last_time:
                                 start += datetime.timedelta(days=1)
-                                #log(start)
                             last_time = start
 
                             flags = aa["data-flags"]
@@ -304,7 +263,7 @@ class Yo:
                             #log(h3)
                             description = h3.get_text().strip()
                             #log(description)
-                            log((start,stop,title,description))
+                            #log((start,stop,title,description))
                             tuple = (start,stop,title,description)
                             if tuple not in programmes:
                                 programmes.append(tuple)
@@ -317,12 +276,12 @@ class Yo:
                                 else:
                                     offset = "-"+offset_str
                                 programme = '<programme start="%s %s" stop="%s %s" channel="yo.%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,id,title,description)
-                                log(programme)
+                                #log(programme)
                                 programme_xml.append(programme)
 
-        log("programmes")
-        for programme in programme_xml:
-            log(programme)
+        #log("programmes")
+        #for programme in programme_xml:
+            #log(programme)
 
         '''
         f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
@@ -346,13 +305,20 @@ class Yo:
 
 @plugin.route('/yo')
 def yo():
-    _yo = Yo()
-    countries = _yo.countries()
+    yo_channels = plugin.get_storage('yo_channels')
+    channel_countries = {yo_channels[x][0] for x in yo_channels}
+
+    countries = Yo().countries()
 
     items = []
 
     for country,label in countries:
         context_items = []
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add All Channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_add_all_channels',country=country))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove All Channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_delete_all_channels',country=country))))
+
+        if country in channel_countries:
+            label = "[COLOR yellow]%s[/COLOR]" % label
 
         items.append(
         {
@@ -367,31 +333,53 @@ def yo():
 
 @plugin.route('/yo_select_channels/<country>')
 def yo_select_channels(country):
-    _yo = Yo()
-    channels = _yo.channels(country)
+    yo_channels = plugin.get_storage('yo_channels')
+    channels = Yo().channels(country)
 
     items = []
     for channel in channels:
         context_items = []
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Update", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_update'))))
+
+        label = channel["name"]
+        if channel["id"] in yo_channels:
+            label = "[COLOR yellow]%s[/COLOR]" % label
+            path = plugin.url_for('yo_delete_channel',id=channel["id"])
+        else:
+            path = plugin.url_for('yo_add_channel',country=country,name=channel["name"].encode("utf8"),id=channel["id"],thumbnail=channel["thumbnail"])
+
         items.append({
-            "label": "%s %s" % (channel["id"],channel["name"]),
+            "label": label, #"%s %s" % (channel["id"],channel["name"]),
             "thumbnail":channel["thumbnail"],
-            "path":plugin.url_for('yo_add_channel',country=country,name=channel["name"],id=channel["id"],thumbnail=channel["thumbnail"]),
+            "path": path,
             'context_menu': context_items,
         })
     return items
 
 
+@plugin.route('/yo_delete_channel/<id>')
+def yo_delete_channel(id):
+    Yo().delete_channel(id)
+
+
+@plugin.route('/yo_delete_all_channels/<country>')
+def yo_delete_all_channels(country):
+    Yo().delete_all_channels(country)
+
+
 @plugin.route('/yo_add_channel/<country>/<id>/<name>/<thumbnail>')
 def yo_add_channel(country,id,name,thumbnail):
-    _yo = Yo()
-    _yo.add_channel(country,id,name,thumbnail)
+    Yo().add_channel(country,id,name,thumbnail)
+
+
+@plugin.route('/yo_add_all_channels/<country>')
+def yo_add_all_channels(country):
+    Yo().add_all_channels(country)
+
 
 @plugin.route('/yo_update')
 def yo_update():
-    _yo = Yo()
-    _yo.update()
+    Yo().update()
 
 
 @plugin.route('/reset')
@@ -882,8 +870,8 @@ def yo_add_channel1(name,country,number,thumbnail):
     add_json_channel(id)
     #xbmc.executebuiltin('Container.Refresh')
 
-@plugin.route('/yo_delete_channel/<id>')
-def yo_delete_channel(id):
+@plugin.route('/yo_delete_channel1/<id>')
+def yo_delete_channel1(id):
     id = decode(id)
 
     yo_channels = plugin.get_storage('yo_channels')
@@ -1282,13 +1270,13 @@ def delete_all_channels(url):
     select_channels(url,remove_all=True)
 
 
-@plugin.route('/yo_add_all_channels/<url>')
-def yo_add_all_channels(url):
+@plugin.route('/yo_add_all_channels1/<url>')
+def yo_add_all_channels1(url):
     yo_select_channels(url,add_all=True)
 
 
-@plugin.route('/yo_delete_all_channels/<url>')
-def yo_delete_all_channels(url):
+@plugin.route('/yo_delete_all_channels1/<url>')
+def yo_delete_all_channels1(url):
     yo_select_channels(url,remove_all=True)
 
 @plugin.route('/select_channels/<url>')
