@@ -296,26 +296,7 @@ class Yo:
                                 #log(programme)
                                 programme_xml.append(programme)
 
-        #log("programmes")
-        #for programme in programme_xml:
-            #log(programme)
 
-        '''
-        f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
-        f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-        f.write('<tv generator-info-name="xmltv Meld" >\n\n')
-        f.write('\n\n'.join(channel_xml).encode("utf8"))
-        f.write('\n\n\n')
-        for programme in program_xml:
-            f.write(programme.encode("utf8")+'\n\n')
-        f.write('\n')
-        f.write('</tv>\n')
-        f.close()
-        '''
-
-        #log((url,data))
-        #return channel_items
-        log((channel_xml,programme_xml,m3u_streams))
         return channel_xml,programme_xml,m3u_streams
 
 
@@ -418,7 +399,7 @@ def reset():
 def update_zap():
     zaps = plugin.get_storage('zaps')
 
-    zap_channels = plugin.get_storage('zap_channels')
+    zap_channels = plugin.get_storage('zap2_channels')
     streams = plugin.get_storage('streams')
     radio = plugin.get_storage('radio')
 
@@ -584,7 +565,7 @@ def xml_update():
             if icon:
                 icon = icon.group(1)
 
-            log((id,channels.keys()))
+            #log((id,channels.keys()))
             if id in channels:
                 selected_channels[id] = channel
                 name = names.get(id,name)
@@ -739,7 +720,7 @@ def update():
     yo_channel_xml,yo_programme_xml,yo_m3u_streams = Yo().update()
     xml_channel_xml,xml_programme_xml,xml_m3u_streams = xml_update()
     zap_channels, zap_programmes, zap_m3u_streams = update_zap()
-    log((zap_channels, zap_programmes, zap_m3u_streams))
+    #log((zap_channels, zap_programmes, zap_m3u_streams))
 
     channel_xml = yo_channel_xml
     channel_xml.update(xml_channel_xml)
@@ -816,7 +797,7 @@ def create_json_channels():
     path = profile()+'id_order.json'
     if not xbmcvfs.exists(path):
         channels = plugin.get_storage('channels')
-        zap_channels = plugin.get_storage('zap_channels')
+        zap_channels = plugin.get_storage('zap2_channels')
         all_channels = dict(channels.items())
         all_channels.update(dict(zap_channels.items()))
         f = xbmcvfs.File(path,'w')
@@ -972,7 +953,7 @@ def radio_stream(id):
 @plugin.route('/zap_radio_stream/<id>')
 def zap_radio_stream(id):
     id = decode(id)
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     radio_stream_dialog(id,channels)
 
 
@@ -999,7 +980,7 @@ def channel_stream(id,name):
 def zap_channel_stream(id):
     id = decode(id)
 
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     channel_stream_dialog(id,channels[id])
 
 
@@ -1057,7 +1038,7 @@ def guess_channel_stream(id,name):
 def guess_zap_channel_stream(id):
     id = decode(id)
 
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     return guess_channel_stream_dialog(id,channels)
 
 
@@ -1081,7 +1062,7 @@ def guess_channel_stream_dialog(id,name):
     other = []
     for folder in folders:
         addon = folders[folder]
-        log((addon,folder,paths))
+        #log((addon,folder,paths))
         #addon_label = paths["plugin://"+addon]
         addon_label = xbmcaddon.Addon(addon).getAddonInfo('name')
         folder_label = paths[folder]
@@ -1148,7 +1129,7 @@ def guess_streams():
 
 def guess_streams_function(missing=False):
     channels = plugin.get_storage('channels')
-    zap_channels = plugin.get_storage('zap_channels')
+    zap_channels = plugin.get_storage('zap2_channels')
     streams = plugin.get_storage('streams')
     names = plugin.get_storage('names')
 
@@ -1199,7 +1180,7 @@ def paste_channel_stream(id):
 def paste_zap_channel_stream(id):
     id = decode(id)
 
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     paste_channel_stream_dialog(id,channels)
 
 
@@ -1266,7 +1247,7 @@ def delete_zap(url):
 def delete_zap_channel(id):
     id = decode(id)
 
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     if id in channels:
         del channels[id]
 
@@ -1291,7 +1272,7 @@ def rename_zap_channel_id(id):
 def rename_zap_channel(id):
     id = decode(id)
 
-    zap_channels = plugin.get_storage('zap_channels')
+    zap_channels = plugin.get_storage('zap2_channels')
     names = plugin.get_storage('names')
     name = zap_channels[id]
     new_name = names.get(id,name)
@@ -1309,7 +1290,7 @@ def add_zap_channel(name,id,country,thumbnail):
     #name = name.decode("utf")
     #id = decode(id)
 
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     channels[id] = (name,id,country,thumbnail)
 
     #add_json_channel(id)
@@ -1562,7 +1543,7 @@ def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False
     channels = j.get('channels')
 
     items = []
-    zap_channels = plugin.get_storage('zap_channels')
+    zap_channels = plugin.get_storage('zap2_channels')
 
 
     for channel in channels:
@@ -1739,17 +1720,15 @@ def move_channel(id):
     if index == -1:
         return
 
-    log(new_order)
     oldindex = new_order.index(id)
     new_order.insert(index+1, new_order.pop(oldindex))
-    log(new_order)
     order.clear()
     for i,cid in enumerate(new_order):
         order[cid] = i
 
 
 def zap_all_channels():
-    channels = plugin.get_storage('zap_channels')
+    channels = plugin.get_storage('zap2_channels')
     all = []
     for id,(name,id,country,thumbnail) in channels.items():
         all.append({
@@ -2041,6 +2020,13 @@ def folders_addons():
 @plugin.route('/')
 def index():
     items = []
+
+    items.append(
+    {
+        'label': "[COLOR red]Internal Format Has Changed: Please RESET and Re-Add Channels[/COLOR]",
+        'thumbnail':get_icon_path('unknown'),
+    })
+
     context_items = []
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove xmltv', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_xmltv'))))
     items.append(
