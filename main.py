@@ -139,7 +139,7 @@ class Yo:
         data = xbmcvfs.File(url,"r").read()
         soup = BeautifulSoup(data, "html.parser")
         x = soup.select("#channelbar")
-        img = x[0].select("li > img")
+        li_img = x[0].select("li")
 
         ul = soup.select("#content ul")[0]
         li = ul.find_all("li",recursive=False)
@@ -147,11 +147,20 @@ class Yo:
         ids = [l["id"] for l in li]
         #log(ids)
 
+        #log((len(ids),len(li_img)))
+
         channel_list = []
-        for i,im in enumerate(img):
-            name = im["alt"]
-            thumbnail  = im["data-original"]
-            number = im.parent.get_text().strip()
+        for i,img in enumerate(li_img):
+            im = img.find("img",recursive=False)
+            if not im:
+                h2 = img.find("h2",recursive=False)
+                name = h2.get_text().strip()
+                thumbnail = get_icon_path("tv")
+                #number = "-1"
+            else:
+                name = im["alt"]
+                thumbnail  = im["data-original"]
+                #number = im.parent.get_text().strip()
             channel_list.append({
                 "name" : name,
                 "id": ids[i],
@@ -346,6 +355,7 @@ def yo_select_channels(country):
         context_items = []
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Update", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_update'))))
 
+        #label = "%s %s" % (channel["id"],channel["name"])
         label = channel["name"]
         if channel["id"] in yo_channels:
             label = "[COLOR yellow]%s[/COLOR]" % label
