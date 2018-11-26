@@ -236,7 +236,7 @@ class Yo:
         programme_xml = []
         for country in countries:
             for name,id,thumbnail in countries[country]:
-                for day in range(2):
+                for day in range(plugin.get_setting('yo.days',int)):
                     offset = divmod(-time.timezone,3600)
                     offset_str = "%02d.%02d" % (abs(offset[0]),offset[1])
                     if offset[0] >= 0:

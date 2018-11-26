@@ -9,6 +9,8 @@
 <setting id="zap.days" label="Zap Days" type="number" default="1"/>
 <setting id="zap.usa.zipcode" label="Zap USA Zipcode" type="text" default="90210"/>
 <setting id="zap.can.zipcode" label="Zap Canada Zipcode" type="text" default="M5V2T6"/>
+<setting type="sep"/>
+<setting label="yo.tv Days" type="slider" id="yo.days" default="1" range="1,1,6" option="int" />
 </category>
 
 <category label="Service">
