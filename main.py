@@ -237,7 +237,14 @@ class Yo:
         for country in countries:
             for name,id,thumbnail in countries[country]:
                 for day in range(2):
-                    url = "http://%s.yo.tv/api/GS?cid=%s&offset=+01.00&day=%s" % (country,id,day)
+                    offset = divmod(-time.timezone,3600)
+                    offset_str = "%02d.%02d" % (abs(offset[0]),offset[1])
+                    if offset[0] >= 0:
+                        offset = "+"+offset_str
+                    else:
+                        offset = "-"+offset_str
+
+                    url = "http://%s.yo.tv/api/GS?cid=%s&offset=%s&day=%s" % (country,id,offset,day)
                     log(url)
                     data = requests.get(url).json()
                     #log(data)
