@@ -407,14 +407,9 @@ def reset():
 
     if not (xbmcgui.Dialog().yesno("xmltv Meld", "[COLOR red]" + "Remove Channels?" + "[/COLOR]")):
         return
-    xmltv = plugin.get_storage('xmltv')
-    xmltv.clear()
-    channels = plugin.get_storage('channels')
-    channels.clear()
-    zaps = plugin.get_storage('zaps')
-    zaps.clear()
-    zap_channels = plugin.get_storage('zap_channels')
-    zap_channels.clear()
+
+    for storage in ['all_channels', 'channels', 'custom_xmltv', 'folders', 'icons', 'ids', 'm3u_contents', 'names', 'order', 'paths', 'streams', 'subscribe_m3us', 'xml_channels', 'xmltv', 'yo_channels', 'zap_channels', 'zaps']:
+        plugin.get_storage(storage).clear()
 
     xbmcvfs.delete(profile()+'id_order.json')
 
@@ -934,29 +929,6 @@ def delete_channel(id):
     if id in channels:
         del channels[id]
 
-    #delete_json_channel(id)
-
-
-@plugin.route('/yo_add_channel1/<name>/<country>/<number>/<thumbnail>')
-def yo_add_channel1(name,country,number,thumbnail):
-    yo_channels = plugin.get_storage('yo_channels')
-    yo_channels[(name,country,number)] = thumbnail
-
-    id = "%s %s %s" % (name,country,number)
-
-    add_json_channel(id)
-    #xbmc.executebuiltin('Container.Refresh')
-
-@plugin.route('/yo_delete_channel1/<id>')
-def yo_delete_channel1(id):
-    id = decode(id)
-
-    yo_channels = plugin.get_storage('yo_channels')
-    if id in yo_channels:
-        del yo_channels[id]
-
-    delete_json_channel(id)
-
 
 @plugin.route('/rename_channel_id/<id>')
 def rename_channel_id(id):
@@ -1354,16 +1326,6 @@ def delete_all_channels(url,description):
     select_channels(url,description,remove_all=True)
 
 
-@plugin.route('/yo_add_all_channels1/<url>')
-def yo_add_all_channels1(url):
-    yo_select_channels(url,add_all=True)
-
-
-@plugin.route('/yo_delete_all_channels1/<url>')
-def yo_delete_all_channels1(url):
-    yo_select_channels(url,remove_all=True)
-
-
 @plugin.route('/select_channels/<url>/<description>')
 def select_channels(url, description, add_all=False, remove_all=False):
     #icons = plugin.get_storage('icons')
@@ -1446,209 +1408,6 @@ def select_channels(url, description, add_all=False, remove_all=False):
 
 
 def tree(): return collections.defaultdict(tree)
-
-@plugin.route('/update_yo1')
-def update_yo1():
-    icons = plugin.get_storage('icons')
-
-    yo_channels = plugin.get_storage('yo_channels')
-
-    yo = tree()
-    for (name,country,number),thumbnail in yo_channels.iteritems():
-        yo[country][number][name] = thumbnail
-
-    log(yo)
-    #return
-
-    channel_xml = {}
-    for (name,country,number),thumbnail in yo_channels.iteritems():
-        xchannel = '<channel id="%s %s">\n' % (name,country)
-        xchannel += '\t<display-name>' + escape(name) + '</display-name>\n'
-        if thumbnail:
-            xchannel += '\t<icon src="' + thumbnail + '"/>\n'
-        xchannel += '</channel>'
-        channel_xml[(name,country)] = xchannel
-
-    for c in channel_xml:
-        log(c)
-
-    for country in yo:
-
-
-        #country = re.search('//(.*?).yo.tv',url).group(1)
-        url = "http://%s.yo.tv" % country
-
-        data = xbmcvfs.File(url,"r").read()
-        soup = BeautifulSoup(data, "html.parser")
-        x = soup.select("#channelbar")
-        img = x[0].select("li > img")
-
-        #channels = plugin.get_storage('channels')
-
-        channel_items = []
-        channel_tuple = []
-        for i in img:
-            name = i["alt"]
-            thumbnail  = i["data-original"]
-            number = i.parent.get_text().strip()
-            channel_tuple.append((number,name,thumbnail))
-            #log(number)
-            #channel_items.append({
-            #    "label": "%s %s" % (number.strip(),name),
-            #    "thumbnail":thumbnail
-            #})
-
-
-        ul = soup.select("#content ul")[0]
-        li = ul.find_all("li",recursive=False)
-        log(li)
-        ids = [l["id"] for l in li]
-        log(ids)
-
-
-        programs = []
-
-        program_xml = []
-
-        index = 0
-        for number in yo[country]:
-        #for id in [ids[index]]:
-            id = ids[int(number)-1]
-            log(("id",id))
-
-            number,name,thumbnail = channel_tuple[index]
-
-            for day in range(2):
-                url = "http://%s.yo.tv/api/GS?cid=%s&offset=+01.00&day=%s" % (country,id,day)
-                log(url)
-                data = requests.get(url).json()
-                #log(data)
-
-                now = datetime.datetime.now()
-                for li in data:
-                    #log(li)
-                    soup = BeautifulSoup(li,'html.parser')
-                    a = soup.find_all('a',recursive=False)
-                    last_time = datetime.datetime(year=1900,month=1,day=1)
-                    for aa in a:
-                        #log(aa)
-
-                        start = aa["data-time"]
-                        #log(start)
-                        hour_minute,am_pm = start.split()
-                        hour,minute = hour_minute.split(":")
-                        hour = int(hour)
-                        minute=int(minute)
-                        if am_pm == "pm" and hour != 12:
-                            hour += 12
-                        elif am_pm == "am" and hour == 12:
-                            hour = 0
-
-                        #start = datetime.datetime.strptime(start.upper(),"%H:%M %p")
-                        #log(start)
-                        start = now.replace(hour=hour,minute=minute,second=0,microsecond=0) + datetime.timedelta(days=day)
-                        #log(start)
-                        if start < last_time:
-                            start += datetime.timedelta(days=1)
-                            #log(start)
-                        last_time = start
-
-                        flags = aa["data-flags"]
-                        stop = start
-                        match = re.search('(\d+) minutes',flags)
-                        if match:
-                            stop = start + datetime.timedelta(minutes=int(match.group(1)))
-
-                        #log(start)
-                        h2 = aa.find('h2',recursive=False)
-                        #log(h2)
-                        title = h2.get_text().strip()
-                        #log(title)
-                        h3 = aa.find('h3',recursive=False)
-                        #log(h3)
-                        description = h3.get_text().strip()
-                        #log(description)
-                        log((start,stop,title,description))
-                        tuple = (start,stop,title,description)
-                        if tuple not in programs:
-                            programs.append(tuple)
-                            start = start.strftime("%Y%m%d%H%M%S")
-                            stop = stop.strftime("%Y%m%d%H%M%S")
-                            offset = divmod(-time.timezone,3600)
-                            offset_str = "%02d%02d" % (abs(offset[0]),offset[1])
-                            if offset[0] >= 0:
-                                offset = "+"+offset_str
-                            else:
-                                offset = "-"+offset_str
-                            programme = '<programme start="%s %s" stop="%s %s" channel="%s"><title>%s</title><desc>%s</desc></programme>' % (start,offset,stop,offset,name + ' ' + country,title,description)
-                            log(programme)
-                            program_xml.append(programme)
-
-    log("programs")
-    for program in program_xml:
-        log(program)
-
-    '''
-    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
-    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    f.write('<tv generator-info-name="xmltv Meld" >\n\n')
-    f.write('\n\n'.join(channel_xml).encode("utf8"))
-    f.write('\n\n\n')
-    for programme in program_xml:
-        f.write(programme.encode("utf8")+'\n\n')
-    f.write('\n')
-    f.write('</tv>\n')
-    f.close()
-    '''
-
-    #log((url,data))
-    #return channel_items
-    log((channel_xml,program_xml,[]))
-    return channel_xml,program_xml,{}
-
-    match = re.findall('<channel(.*?)</channel>', decode(data), flags=(re.I|re.DOTALL))
-    if match:
-
-        for m in match:
-            id = re.search('id="(.*?)"', m)
-            if id:
-                id = htmlparser.unescape(id.group(1))
-
-            name = re.search('<display-name.*?>(.*?)</display-name', m)
-            if name:
-                name = htmlparser.unescape(name.group(1))
-
-            icon = re.search('<icon.*?src="(.*?)"', m)
-            if icon:
-                icon = icon.group(1)
-
-            if add_all == True:
-                add_channel(name.encode("utf8"), id.encode("utf8"))
-            if remove_all == True:
-                delete_channel(id.encode("utf8"))
-
-            context_items = []
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_all_channels',url=url.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove all channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_all_channels, url=url.encode("utf8")))))
-
-            if id in channels:
-                label = "[COLOR yellow]%s[/COLOR]" % name
-            else:
-                label = name
-
-            icons[id] = icon
-
-            items.append(
-            {
-                'label': label,
-                'path': plugin.url_for('add_channel',name=name.encode("utf8"), id=id.encode("utf8")),
-                'thumbnail':icon,
-                'context_menu': context_items,
-            })
-
-    return sorted(items, key = lambda x: remove_formatting(x['label']))
 
 
 @plugin.route('/add_custom_xmltv_dialog')
@@ -1940,32 +1699,6 @@ def zap_country(country):
     return items
 
 
-
-@plugin.route('/sort_channels1')
-def sort_channels1():
-    channels = plugin.get_storage('channels')
-    zap_channels = plugin.get_storage('zap_channels')
-    all_channels = channels.raw_dict()
-    all_channels.update(zap_channels.raw_dict())
-
-    path = profile()+'id_order.json'
-    if xbmcvfs.exists(path):
-        f = xbmcvfs.File(path,'r')
-        data = f.read()
-        if data:
-            order = json.loads(data)
-        else:
-            order = []
-        f.close()
-    else:
-        order = []
-
-    order.sort(key=lambda k: all_channels[k][0].lower())
-
-    f = xbmcvfs.File(path,'w')
-    f.write(json.dumps(order,indent=0))
-
-
 @plugin.route('/sort_channels')
 def sort_channels():
     order = plugin.get_storage('order')
@@ -1981,43 +1714,6 @@ def sort_channels():
     for i,cid in enumerate(new_order):
         order[cid] = i
 
-
-@plugin.route('/move_channel1/<id>')
-def move_channel1(id):
-    id = decode(id)
-    channels = plugin.get_storage('channels')
-    zap_channels = plugin.get_storage('zap_channels')
-
-    all_channels = dict(channels.items())
-    all_channels.update(dict(zap_channels.items()))
-
-    path = profile()+'id_order.json'
-    if xbmcvfs.exists(path):
-        f = xbmcvfs.File(path,'r')
-        data = f.read()
-        if data:
-            order = json.loads(data)
-        else:
-            order = []
-        f.close()
-    else:
-        order = []
-
-    sorted_channels_names = [all_channels[x] for x in order]
-
-    dialog = xbmcgui.Dialog()
-
-    index = dialog.select('%s: Move After?' % all_channels[id], sorted_channels_names)
-    if index == -1:
-        return
-
-    oldindex = order.index(id)
-    order.insert(index+1, order.pop(oldindex))
-
-    f = xbmcvfs.File(path,'w')
-    f.write(json.dumps(order,indent=0))
-
-    xbmc.executebuiltin('Container.Refresh')
 
 @plugin.route('/move_channel/<id>')
 def move_channel(id):
@@ -2051,100 +1747,6 @@ def move_channel(id):
     for i,cid in enumerate(new_order):
         order[cid] = i
 
-    '''
-    #id = decode(id)
-    #channels = plugin.get_storage('channels')
-    #zap_channels = plugin.get_storage('zap_channels')
-
-    #all_channels = dict(channels.items())
-    #all_channels.update(dict(zap_channels.items()))
-
-    #path = profile()+'id_order.json'
-    if xbmcvfs.exists(path):
-        f = xbmcvfs.File(path,'r')
-        data = f.read()
-        if data:
-            order = json.loads(data)
-        else:
-            order = []
-        f.close()
-    else:
-        order = []
-
-    sorted_channels_names = [all_channels[x] for x in order]
-
-    dialog = xbmcgui.Dialog()
-
-    index = dialog.select('%s: Move After?' % all_channels[id], sorted_channels_names)
-    if index == -1:
-        return
-
-    oldindex = order.index(id)
-    order.insert(index+1, order.pop(oldindex))
-
-    f = xbmcvfs.File(path,'w')
-    f.write(json.dumps(order,indent=0))
-
-    xbmc.executebuiltin('Container.Refresh')
-    '''
-
-@plugin.route('/channels1')
-def channels1():
-    channels = plugin.get_storage('channels')
-    zap_channels = plugin.get_storage('zap_channels')
-    names = plugin.get_storage('names')
-
-    all_channels = dict(channels.items())
-    all_channels.update(dict(zap_channels.items()))
-
-    icons = plugin.get_storage('icons')
-
-    path = profile()+'id_order.json'
-    if xbmcvfs.exists(path):
-        f = xbmcvfs.File(path,'r')
-        data = f.read()
-        if data:
-            order = json.loads(data)
-        else:
-            order = []
-        f.close()
-    else:
-        order = []
-
-    items = []
-    for id in order:
-        name = all_channels.get(id)
-        if not name:
-            continue
-        name = names.get(id,name)
-
-        context_items = []
-        if id in zap_channels:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Zap Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_zap_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_zap_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_radio_stream, id=id.encode("utf8")))))
-        if id in channels:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
-
-        items.append(
-        {
-            'label': name,
-            'path': plugin.url_for('move_channel',id=id.encode("utf8")),
-            'thumbnail': icons.get(id, get_icon_path('tv')),
-            'context_menu': context_items,
-        })
-
-    return items
 
 def zap_all_channels():
     channels = plugin.get_storage('zap_channels')
@@ -2193,7 +1795,7 @@ def channels():
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
 
         items.append(
         {
@@ -2204,66 +1806,6 @@ def channels():
         })
 
     return items
-
-    '''
-    channels = plugin.get_storage('channels')
-    zap_channels = plugin.get_storage('zap_channels')
-    yo_channels = plugin.get_storage('yo_channels')
-    names = plugin.get_storage('names')
-
-    all_channels = dict(channels.items())
-    all_channels.update(dict(zap_channels.items()))
-    all_channels.update(dict(yo_channels.items()))
-
-    icons = plugin.get_storage('icons')
-
-    path = profile()+'id_order.json'
-    if xbmcvfs.exists(path):
-        f = xbmcvfs.File(path,'r')
-        data = f.read()
-        if data:
-            order = json.loads(data)
-        else:
-            order = []
-        f.close()
-    else:
-        order = []
-
-    items = []
-    for id in order:
-        name = all_channels.get(id)
-        if not name:
-            continue
-        name = names.get(id,name)
-
-        context_items = []
-        if id in zap_channels:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Zap Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel_id, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Zap Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_zap_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_zap_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_zap_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(zap_radio_stream, id=id.encode("utf8")))))
-        if id in channels:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
-
-        items.append(
-        {
-            'label': name,
-            'path': plugin.url_for('move_channel',id=id.encode("utf8")),
-            'thumbnail': icons.get(id, get_icon_path('tv')),
-            'context_menu': context_items,
-        })
-
-    return items
-    '''
 
 
 @plugin.route('/folders_paths/<id>/<path>')
