@@ -2093,12 +2093,6 @@ def folders_addons():
 def index():
     items = []
 
-    items.append(
-    {
-        'label': "[COLOR red]Internal Format Has Changed: Please RESET and Re-Add Channels[/COLOR]",
-        'thumbnail':get_icon_path('unknown'),
-    })
-
     context_items = []
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove xmltv', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_xmltv'))))
     items.append(
