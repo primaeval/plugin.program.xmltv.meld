@@ -123,6 +123,47 @@ class Yo:
         self._channels = {}
         self._countries = {}
 
+    def get_url(self,url):
+        #headers = {'user-agent': 'Mozilla/5.0 (BB10; Touch) AppleWebKit/537.10+ (KHTML, like Gecko) Version/10.0.9.2372 Mobile Safari/537.10+'}
+        headers = {'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1'}
+        try:
+            r = requests.get(url,headers=headers)
+            log(r)
+            #log(r.content)
+            #log(r.text)
+            return r.text
+            #html = HTMLParser.HTMLParser().unescape(r.content.decode('utf-8'))
+            #log(html)
+            #return html
+        except:
+            return ''
+
+
+    def select_provider(self,country):
+        d = xbmcgui.Dialog()
+
+        if country == "uk":
+            url = "http://uk.yo.tv/api/setting?id=1594745998&lookupid=3"
+        else:
+            result = d.input("%s: zip/post code" % country)
+            if not result:
+                return
+            url = "http://%s.yo.tv/api/setting?id=%s" % (country,result)
+
+        log(url)
+        j = self.get_url(url)
+        if not j:
+            return
+        data = json.loads(j)
+        providers = [x["Name"] for x in data]
+        index = d.select("%s provider:" % country,providers)
+        if index == -1:
+            return
+        headend = data[index]["Value"]
+        if headend:
+            yo_headends = plugin.get_storage('yo_headends')
+            yo_headends[country] = headend
+
 
     def countries(self):
         htmlparser = HTMLParser()
@@ -135,8 +176,16 @@ class Yo:
 
 
     def channels(self,country):
+        session = requests.Session()
+
+        yo_headends = plugin.get_storage('yo_headends')
+        headend = yo_headends.get(country)
+        if headend:
+            r = session.get('http://%s.yo.tv/settings/headend/%s' % (country,headend))
+
         url = "http://%s.yo.tv" % country
-        data = xbmcvfs.File(url,"r").read()
+
+        data = session.get(url).text
         soup = BeautifulSoup(data, "html.parser")
         x = soup.select("#channelbar")
         li_img = x[0].select("li")
@@ -330,6 +379,7 @@ def yo():
         context_items = []
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add All Channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_add_all_channels',country=country))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove All Channels", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_delete_all_channels',country=country))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Select Provider", 'XBMC.RunPlugin(%s)' % (plugin.url_for('yo_provider',country=country))))
 
         if country in channel_countries:
             label = "[COLOR yellow]%s[/COLOR]" % label
@@ -375,6 +425,11 @@ def yo_select_channels(country):
 @plugin.route('/yo_delete_channel/<id>')
 def yo_delete_channel(id):
     Yo().delete_channel(id)
+
+
+@plugin.route('/yo_provider/<country>')
+def yo_provider(country):
+    Yo().select_provider(country)
 
 
 @plugin.route('/yo_delete_all_channels/<country>')
