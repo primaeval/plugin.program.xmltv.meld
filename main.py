@@ -1840,7 +1840,7 @@ def channels():
         thumbnail = channel["thumbnail"]
 
         context_items = []
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
+        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
@@ -2134,7 +2134,7 @@ def index():
     })
 
     context_items = []
-    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
+    #context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess All Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_streams'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Guess Missing Streams', 'XBMC.RunPlugin(%s)' % (plugin.url_for('guess_missing_streams'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Merge m3u', 'XBMC.RunPlugin(%s)' % (plugin.url_for('add_merge_m3u'))))
