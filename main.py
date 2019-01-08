@@ -1382,12 +1382,14 @@ def delete_all_channels(url,description):
 @plugin.route('/select_channels/<url>/<description>')
 def select_channels(url, description, add_all=False, remove_all=False):
     #icons = plugin.get_storage('icons')
-
+    log(url)
     if '\\' in url:
         url = url.replace('\\','/')
 
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
-    success = xbmcvfs.copy(url,filename)
+    #success = xbmcvfs.copy(url,filename)
+    with open(filename,'wb') as f:
+        f.write(requests.get(url).content)
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
@@ -1530,7 +1532,7 @@ def rytec_xmltv():
     xml_urls = {xml_channels[x][0] for x in xml_channels}
     #log(xml_urls)
 
-    sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml","r").read()
+    sources = xbmcvfs.File("https://rytec.ricx.nl/epg_data/rytec.WoS.sources.xml","r").read()
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
@@ -1539,7 +1541,7 @@ def rytec_xmltv():
     for channels,description,url in sorted(urls,key=lambda x: x[1]):
 
         context_items = []
-        #log(url)
+        log(url)
         if url not in xml_urls:
             #context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
             label = description
