@@ -561,6 +561,11 @@ def xml_update():
 
     #xmltv = plugin.get_storage('xmltv')
     channels = plugin.get_storage('xml_channels')
+    for channel in channels:
+        data = list(channels[channel])
+        data[0] = data[0].replace('http://rytecepg.epgspot.com/epg_data/','http://rytecepg.dyndns.tv/~rytecepg/epg_data/')
+        channels[channel]  = data
+    channels.sync()
     xml_urls = {channels[x][0] for x in channels}
     groups = {channels[x][0]:channels[x][1] for x in channels}
     streams = plugin.get_storage('streams')
