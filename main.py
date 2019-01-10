@@ -563,7 +563,7 @@ def xml_update():
     channels = plugin.get_storage('xml_channels')
     for channel in channels:
         data = list(channels[channel])
-        data[0] = data[0].replace('http://rytecepg.epgspot.com/epg_data/','http://rytecepg.dyndns.tv/~rytecepg/epg_data/')
+        data[0] = data[0].replace('http://rytecepg.dyndns.tv/~rytecepg/epg_data/','http://rytecepg.epgspot.com/epg_data/')
         channels[channel]  = data
     channels.sync()
     xml_urls = {channels[x][0] for x in channels}
@@ -1537,7 +1537,8 @@ def rytec_xmltv():
     xml_urls = {xml_channels[x][0] for x in xml_channels}
     #log(xml_urls)
 
-    sources = xbmcvfs.File("http://rytec.ricx.nl/epg_data/rytec.WoS.sources.xml","r").read()
+    #sources = xbmcvfs.File("http://rytec.ricx.nl/epg_data/rytec.WoS.sources.xml","r").read()
+    sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml","r").read()
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
