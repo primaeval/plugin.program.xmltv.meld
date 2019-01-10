@@ -1537,7 +1537,7 @@ def rytec_xmltv():
     xml_urls = {xml_channels[x][0] for x in xml_channels}
     #log(xml_urls)
 
-    sources = xbmcvfs.File("https://rytec.ricx.nl/epg_data/rytec.WoS.sources.xml","r").read()
+    sources = xbmcvfs.File("http://rytec.ricx.nl/epg_data/rytec.WoS.sources.xml","r").read()
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
