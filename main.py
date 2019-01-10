@@ -2183,6 +2183,10 @@ def index():
 
 if __name__ == '__main__':
     create_json_channels()
+    try:
+        xbmcvfs.mkdirs("special://profile/addon_data/plugin.program.xmltv.meld/temp/")
+    except:
+        pass
     plugin.run()
     if big_list_view == True:
         view_mode = int(plugin.get_setting('view_mode'))
