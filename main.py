@@ -1394,7 +1394,7 @@ def select_channels(url, description, add_all=False, remove_all=False):
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
     #success = xbmcvfs.copy(url,filename)
     with open(filename,'wb') as f:
-        f.write(requests.get(url).content)
+        f.write(xbmcvfs.File(url).read())
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
