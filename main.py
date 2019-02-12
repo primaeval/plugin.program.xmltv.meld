@@ -595,8 +595,15 @@ def xml_update():
             url = url.replace('\\','/')
 
         filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
-        success = xbmcvfs.copy(url,filename)
-        if not success:
+
+        try:
+            with open(filename,'wb') as f:
+                if url.startswith('http') or url.startswith('ftp'):
+                    data = requests.get(url).content
+                    f.write(data)
+                else:
+                    f.write(xbmcvfs.File(url).read())
+        except:
             continue
 
         if filename.endswith('.xz'):
@@ -1392,9 +1399,13 @@ def select_channels(url, description, add_all=False, remove_all=False):
         url = url.replace('\\','/')
 
     filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
-    #success = xbmcvfs.copy(url,filename)
+
     with open(filename,'wb') as f:
-        f.write(xbmcvfs.File(url).read())
+        if url.startswith('http') or url.startswith('ftp'):
+            data = requests.get(url).content
+            f.write(data)
+        else:
+            f.write(xbmcvfs.File(url).read())
 
     if filename.endswith('.xz'):
         f = open(filename+".xml","w")
