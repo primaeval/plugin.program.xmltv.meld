@@ -931,19 +931,21 @@ def add_dummy_channel(url,label):
 
     xmltv = plugin.get_storage('xmltv')
     name = "Dummy Channels"
+    description = name
     xml = "special://home/addons/plugin.program.xmltv.meld/resources/dummy.xml"
     xmltv[xml] = name
 
-    channels = plugin.get_storage('channels')
+    channels = plugin.get_storage('xml_channels')
     for i in range(1,1000):
         id = "dummy%03d" % i
         if id not in channels:
             break
 
     name =  remove_formatting(label)
-    channels[id] = name
-
-    add_json_channel(id)
+    #channels[id] = name
+    thumbnail = get_icon_path('tv')
+    channels[id] = (url,description,name,id,thumbnail)
+    #add_json_channel(id)
 
     streams = plugin.get_storage('streams')
     streams[id] = url
