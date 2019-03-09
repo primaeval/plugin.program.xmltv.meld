@@ -1676,26 +1676,30 @@ def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False
 def zap():
     items = []
 
-    for label, country in [("Canada","CAN"), ("USA","USA")]:
+    for i in ["1","2"]:
+        for label, country in [("Canada","CAN"), ("USA","USA")]:
 
-        context_items = []
+            context_items = []
 
-        items.append(
-        {
-            'label': label,
-            'path': plugin.url_for('zap_country',country=country),
-            'thumbnail':get_icon_path('tv'),
-            'context_menu': context_items,
-        })
+            items.append(
+            {
+                'label': "%s %s" % (label,i),
+                'path': plugin.url_for('zap_country',country=country,i=i),
+                'thumbnail':get_icon_path('tv'),
+                'context_menu': context_items,
+            })
 
     return items
 
 
-@plugin.route('/zap_country/<country>')
-def zap_country(country):
+@plugin.route('/zap_country/<country>/<i>')
+def zap_country(country,i):
     zaps = plugin.get_storage('zaps')
 
-    zipcode = plugin.get_setting('zap.' + country.lower() + '.zipcode')
+    if i == "1":
+        i = ""
+
+    zipcode = plugin.get_setting('zap.' + country.lower() + '.zipcode'+i)
 
     url = 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/' + country + '/' + zipcode + '/gapzap'
 
@@ -1755,7 +1759,7 @@ def zap_country(country):
 
         context_items = []
         if url not in zaps:
-            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name, url=url))))
+            context_items.append(("[COLOR yellow]%s[/COLOR]" %"Add zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_zap, name=name.encode("utf8"), url=url))))
             label = label
         else:
             context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove zap", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_zap, url=url))))
