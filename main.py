@@ -1839,6 +1839,9 @@ def xml_all_channels():
     channels = plugin.get_storage('xml_channels')
     all = []
     for id,(url,description,name,id,thumbnail) in channels.items():
+        new_url = re.sub('user=old','user=new',url)
+        new_url = re.sub('pass=old','pass=new',url)
+        channels[id] = (new_url,description,name,id,thumbnail)
         all.append({
             "id": id,
             "name": name,
