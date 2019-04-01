@@ -128,7 +128,7 @@ class Yo:
         headers = {'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1'}
         try:
             r = requests.get(url,headers=headers)
-            log(r)
+            #log(r)
             #log(r.content)
             #log(r.text)
             return r.text
@@ -150,7 +150,7 @@ class Yo:
                 return
             url = "http://%s.yo.tv/api/setting?id=%s" % (country,result)
 
-        log(url)
+        #log(url)
         j = self.get_url(url)
         if not j:
             return
@@ -303,7 +303,7 @@ class Yo:
                         offset = "-"+offset_str
 
                     url = "http://%s.yo.tv/api/GS?cid=%s&offset=%s&day=%s" % (country,id,offset,day)
-                    log(url)
+                    #log(url)
                     data = requests.get(url).json()
                     #log(data)
 
@@ -976,9 +976,9 @@ def remove_dummy_channel(url):
 
 @plugin.route('/add_channel/<url>/<description>/<name>/<id>/<thumbnail>')
 def add_channel(url,description,name,id,thumbnail):
-    #name = decode(name)
-    #id = decode(id)
-
+    name = decode(name)
+    id = decode(id)
+    #log(name)
     channels = plugin.get_storage('xml_channels')
     channels[id] = (url,description,name,id,thumbnail)
 
@@ -1394,7 +1394,7 @@ def delete_all_channels(url,description):
 @plugin.route('/select_channels/<url>/<description>')
 def select_channels(url, description, add_all=False, remove_all=False):
     #icons = plugin.get_storage('icons')
-    log(url)
+    #log(url)
     if '\\' in url:
         url = url.replace('\\','/')
 
@@ -1558,7 +1558,7 @@ def rytec_xmltv():
     for channels,description,url in sorted(urls,key=lambda x: x[1]):
 
         context_items = []
-        log(url)
+        #log(url)
         if url not in xml_urls:
             #context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=description, url=url))))
             label = description
@@ -1701,8 +1701,8 @@ def zap_country(country,i):
 
     zipcode = plugin.get_setting('zap.' + country.lower() + '.zipcode'+i)
 
-    url = 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/' + country + '/' + zipcode + '/gapzap'
-
+    url = 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/' + country + '/' + zipcode + '/gapzap/en'
+    #log(url)
     sources = xbmcvfs.File(url,"r").read()
 
     j = json.loads(sources)
@@ -1861,7 +1861,7 @@ def channels():
         label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),names.get(channel["id"],channel["name"]),channel["provider"],channel["country"])
         id = channel["id"]
         thumbnail = channel["thumbnail"]
-
+        #log(channel)
         context_items = []
         #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
