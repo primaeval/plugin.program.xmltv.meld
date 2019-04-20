@@ -1859,7 +1859,7 @@ def channels():
 
     for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
         label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),names.get(channel["id"],channel["name"]),channel["provider"],channel["country"])
-        id = channel["id"]
+        id = channel["id"].decode("utf8")
         thumbnail = channel["thumbnail"]
         #log(channel)
         context_items = []
