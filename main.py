@@ -1860,14 +1860,15 @@ def channels():
     for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
         label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),names.get(channel["id"],channel["name"]),channel["provider"],channel["country"])
         id = channel["id"].decode("utf8")
+        name = channel["name"].decode("utf8")
         thumbnail = channel["thumbnail"]
         #log(channel)
         context_items = []
         #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8"), name=channel["name"].encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'XBMC.RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8"), name=name.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Channel Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(channel_stream, id=id.encode("utf8"), name=name.encode("utf8")))))
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %"Guess Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(guess_channel_stream, id=id.encode("utf8"), name=name.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Paste Stream", 'XBMC.RunPlugin(%s)' % (plugin.url_for(paste_channel_stream, id=id.encode("utf8")))))
         #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'XBMC.RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
 
