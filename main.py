@@ -1629,7 +1629,8 @@ def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False
     gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
 
     url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
-    data = xbmcvfs.File(url,'r').read()
+    #data = xbmcvfs.File(url,'r').read()
+    data = requests.get(url).content
     j = json.loads(data)
     channels = j.get('channels')
 
@@ -1703,7 +1704,8 @@ def zap_country(country,i):
 
     url = 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/' + country + '/' + zipcode + '/gapzap/en'
     #log(url)
-    sources = xbmcvfs.File(url,"r").read()
+    #sources = xbmcvfs.File(url,"r").read()
+    sources = requests.get(url).content
 
     j = json.loads(sources)
     providers = j.get('Providers')
