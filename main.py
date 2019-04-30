@@ -167,7 +167,8 @@ class Yo:
 
     def countries(self):
         htmlparser = HTMLParser()
-        sources = xbmcvfs.File("http://yo.tv/","r").read()
+        #sources = xbmcvfs.File("http://yo.tv/","r").read()
+        sources = requests.get("http://yo.tv/").content
 
         match = re.findall('<li><a href="http://(.*?)\.yo\.tv"  >(.*?)</a></li>',sources)
         self._countries = {m[0]:htmlparser.unescape(m[1].decode("utf8")) for m in match}
@@ -488,7 +489,8 @@ def update_zap():
         gridtime = gridtimeStart
         while count < (8 * int(plugin.get_setting('zap.days') or "1")):
             u = url + '&time=' + str(gridtime)
-            data = xbmcvfs.File(u,'r').read()
+            #data = xbmcvfs.File(u,'r').read()
+            data = requests.get(u).content
             j = json.loads(data)
             channels = j.get('channels')
 
@@ -621,7 +623,8 @@ def xml_update():
             data = xbmcvfs.File(filename[:-3],'r').read()
         else:
             if filename.startswith("http"):
-                data = xbmcvfs.File(filename,'r').read()
+                #data = xbmcvfs.File(filename,'r').read()
+                data = requests.get(filename).content
             else:
                 f = open(filename,'r')
                 data = f.read()
