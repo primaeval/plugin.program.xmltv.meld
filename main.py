@@ -2118,6 +2118,14 @@ def folders_addons():
     return items
 
 
+@plugin.route('/delete_busybox')
+def delete_busybox():
+    busybox = busybox_location()
+    success = xbmcvfs.delete(busybox)
+    if success:
+        xbmcgui.Dialog().notification("xmltv Meld", "busybox deleted")
+
+
 @plugin.route('/')
 def index():
     items = []
@@ -2194,11 +2202,16 @@ def index():
         'path': plugin.url_for('start_update'),
         'thumbnail':get_icon_path('settings'),
     })
+
+    context_items = []
+    if xbmc.getCondVisibility('system.platform.android'):
+        context_items.append(("[COLOR yellow]%s[/COLOR]" %'Delete busybox', 'XBMC.RunPlugin(%s)' % (plugin.url_for('delete_busybox'))))
     items.append(
     {
         'label': "Reset",
         'path': plugin.url_for('reset'),
         'thumbnail':get_icon_path('settings'),
+        'context_menu': context_items,
     })
     return items
 
