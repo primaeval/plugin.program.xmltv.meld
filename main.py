@@ -2032,6 +2032,21 @@ def remove_xmltv():
             del xmltv[url]
 
 
+@plugin.route('/remove_xmltv_channels')
+def remove_xmltv_channels():
+    channels = xml_all_channels()
+
+    xmltv_label = [x for x in sorted(channels, key=lambda k: k["name"])]
+    labels = ["%s - %s" % (x["country"],x["name"]) for x in xmltv_label]
+
+    indexes = xbmcgui.Dialog().multiselect("Remove channel",labels)
+    if indexes:
+        for index in sorted(indexes, reverse=True):
+            id = xmltv_label[index]["id"]
+            delete_channel(id)
+
+
+
 @plugin.route('/add_folder/<id>/<path>')
 def add_folder(id,path):
     folders = plugin.get_storage('folders')
@@ -2132,6 +2147,7 @@ def index():
 
     context_items = []
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove xmltv', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_xmltv'))))
+    context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove channels', 'XBMC.RunPlugin(%s)' % (plugin.url_for('remove_xmltv_channels'))))
     items.append(
     {
         'label': "Custom",
@@ -2139,7 +2155,7 @@ def index():
         'thumbnail':get_icon_path('tv'),
         'context_menu': context_items,
     })
-
+    context_items = []
     items.append(
     {
         'label': "Rytec",
