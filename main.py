@@ -1846,10 +1846,10 @@ def xml_all_channels():
     channels = plugin.get_storage('xml_channels')
     all = []
     for id,(url,description,name,id,thumbnail) in channels.items():
-        log((id,(url,description,name,id,thumbnail)))
+        #log((id,(url,description,name,id,thumbnail)))
         all.append({
-            "id": id,
-            "name": name,
+            "id": decode(id),
+            "name": decode(name),
             "thumbnail": thumbnail,
             "provider": "xml",
             "country": description.decode("utf8"),
@@ -2039,8 +2039,8 @@ def remove_xmltv():
 def remove_xmltv_channels():
     channels = xml_all_channels()
 
-    xmltv_label = [x for x in sorted(channels, key=lambda k: k["name"])]
-    labels = ["%s - %s" % (x["country"],x["name"]) for x in xmltv_label]
+    xmltv_label = [x for x in sorted(channels, key=lambda k: decode(k["name"]))]
+    labels = ["%s - %s" % (x["country"],decode(x["name"])) for x in xmltv_label]
 
     indexes = xbmcgui.Dialog().multiselect("Remove channel",labels)
     if indexes:
