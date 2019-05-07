@@ -655,13 +655,14 @@ def xml_update():
             #log((id,channels.keys()))
             if id in channels:
                 selected_channels[id] = channel
-                name = names.get(id,name)
+                name = decode(names.get(id,name))
                 if radio.get(id):
                     group_label = group+" Radio"
                     radio_flag = 'radio="true" '
                 else:
                     group_label = groups.get(url,"dummy")
                     radio_flag = ''
+                group_label = decode(group_label)
                 m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,ids.get(id,id),icon,group_label,name,streams.get(id,'http://localhost'))
 
         for programme in xprogrammes:
@@ -1396,6 +1397,7 @@ def delete_all_channels(url,description):
 
 @plugin.route('/select_channels/<url>/<description>')
 def select_channels(url, description, add_all=False, remove_all=False):
+    description = description.decode("utf8")
     #icons = plugin.get_storage('icons')
     #log(url)
     if '\\' in url:
@@ -1522,11 +1524,11 @@ def custom_xmltv():
 
     xmltv = plugin.get_storage('xmltv')
     for url in sorted(custom,key=lambda x: custom[x]):
-        name = custom[url]
+        name = custom[url].decode("utf8")
 
         context_items = []
         if url not in xmltv:
-            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=name, url=url))))
+            context_items.append(("[COLOR yellow]Subscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_xmltv, name=name.encode("utf8"), url=url))))
             label = name
         else:
             context_items.append(("[COLOR yellow]Unsubscribe[/COLOR]", 'XBMC.RunPlugin(%s)' % (plugin.url_for(delete_xmltv, url=url))))
@@ -1844,12 +1846,13 @@ def xml_all_channels():
     channels = plugin.get_storage('xml_channels')
     all = []
     for id,(url,description,name,id,thumbnail) in channels.items():
+        log((id,(url,description,name,id,thumbnail)))
         all.append({
             "id": id,
             "name": name,
             "thumbnail": thumbnail,
             "provider": "xml",
-            "country": description,
+            "country": description.decode("utf8"),
         })
     return all
 
@@ -1864,8 +1867,8 @@ def channels():
 
     for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
         label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),names.get(channel["id"],channel["name"]),channel["provider"],channel["country"])
-        id = channel["id"].decode("utf8")
-        name = channel["name"].decode("utf8")
+        id = channel["id"]
+        name = channel["name"]
         thumbnail = channel["thumbnail"]
         #log(channel)
         context_items = []
