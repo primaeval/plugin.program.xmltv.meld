@@ -1633,7 +1633,7 @@ def select_zap_channels(country, zipcode, device, lineup, headend, add_all=False
 
     gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
 
-    url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
+    url = 'https://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
     #data = xbmcvfs.File(url,'r').read()
     data = requests.get(url).content
     j = json.loads(data)
@@ -1732,7 +1732,7 @@ def zap_country(country,i):
         #label = "%s / %s / %s / %s" % (name,device,lineup,headend)
         label = name
 
-        url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode  + '&pref=-&userId=-'
+        url = 'https://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode  + '&pref=-&userId=-'
 
         context_items = []
         if url not in zaps:
@@ -1762,7 +1762,7 @@ def zap_country(country,i):
         #label = "%s / %s / %s / %s" % (name,device,lineup,headend)
         label = name
 
-        url = 'http://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode  + '&pref=-&userId=-'
+        url = 'https://tvlistings.gracenote.com/api/grid?lineupId='+lineup+'&timespan=3&headendId=' + headend + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode  + '&pref=-&userId=-'
 
         context_items = []
         if url not in zaps:
