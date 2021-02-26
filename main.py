@@ -1,11 +1,12 @@
 from xbmcswift2 import Plugin
+import html
 import re
 import requests
 import xbmc,xbmcaddon,xbmcvfs,xbmcgui
 import xbmcplugin
 import base64
 import random
-import urllib,urlparse
+import urllib.request, urllib.parse, urllib.error,urllib.parse
 import time,datetime,calendar
 import threading
 import subprocess
@@ -15,7 +16,7 @@ import stat
 import platform
 import pickle
 #import lzma
-from HTMLParser import HTMLParser
+from html.parser import HTMLParser
 from rpc import RPC
 from bs4 import BeautifulSoup
 import collections
@@ -87,8 +88,16 @@ def android_get_current_appid():
         return fp.read().rstrip("\0")
 
 
+def xmltv_location():
+    src = xbmcvfs.translatePath(plugin.get_setting('location'))
+
+    if xbmcvfs.exists(src):
+        return src
+    else:
+        xbmcgui.Dialog().notification("xmltv Meld","xmltv location not found",xbmcgui.NOTIFICATION_ERROR)
+
 def busybox_location():
-    busybox_src = xbmc.translatePath(plugin.get_setting('busybox'))
+    busybox_src = xbmcvfs.translatePath(plugin.get_setting('busybox'))
 
     if xbmc.getCondVisibility('system.platform.android'):
         busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
@@ -168,12 +177,12 @@ class Yo:
     def countries(self):
         htmlparser = HTMLParser()
         #sources = xbmcvfs.File("http://yo.tv/","r").read()
-        sources = requests.get("http://yo.tv/").content
+        sources = requests.get("http://yo.tv/").content.decode('utf-8')
 
         match = re.findall('<li><a href="http://(.*?)\.yo\.tv"  >(.*?)</a></li>',sources)
-        self._countries = {m[0]:htmlparser.unescape(m[1].decode("utf8")) for m in match}
+        self._countries = {m[0]:html.unescape(m[1]) for m in match}
 
-        return sorted(self._countries.items(), key=operator.itemgetter(1))
+        return sorted(list(self._countries.items()), key=operator.itemgetter(1))
 
 
     def channels(self,country):
@@ -224,7 +233,7 @@ class Yo:
         self.countries()
         channels = plugin.get_storage('yo_channels')
         all = []
-        for id,(country,name,thumbnail) in channels.items():
+        for id,(country,name,thumbnail) in list(channels.items()):
             all.append({
                 "id": id,
                 "name": name,
@@ -255,7 +264,7 @@ class Yo:
 
     def delete_all_channels(self,country):
         channels = plugin.get_storage('yo_channels')
-        for id,(ccountry,name,thumbnail) in channels.items():
+        for id,(ccountry,name,thumbnail) in list(channels.items()):
             #ccountry,name,thumbnail = channels[id]
             if country == ccountry:
                 del channels[id]
@@ -270,7 +279,7 @@ class Yo:
         self.countries()
 
         countries = collections.defaultdict(list)
-        for id,(country,name,thumbnail) in yo_channels.iteritems():
+        for id,(country,name,thumbnail) in yo_channels.items():
             countries[country].append((name,id,thumbnail))
 
         channel_xml = {}
@@ -482,7 +491,7 @@ def update_zap():
 
     gridtimeStart = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
 
-    for url,name in zaps.iteritems():
+    for url,name in zaps.items():
 
         count = 0
 
@@ -596,7 +605,7 @@ def xml_update():
         if '\\' in url:
             url = url.replace('\\','/')
 
-        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
+        filename = xbmcvfs.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
 
         try:
             with open(filename,'wb') as f:
@@ -638,15 +647,15 @@ def xml_update():
         xprogrammes = re.findall('(<programme.*?</programme>)', data, flags=(re.I|re.DOTALL))
 
         for channel in xchannels:
-            if encoding:
-                channel = channel.decode(encoding)
+#            if encoding:
+#                channel = channel.decode(encoding)
             id = re.search('id="(.*?)"', channel)
             if id:
-                id = htmlparser.unescape(id.group(1))
+                id = html.unescape(id.group(1))
 
             name = re.search('<display-name.*?>(.*?)</display-name', channel)
             if name:
-                name = htmlparser.unescape(name.group(1))
+                name = html.unescape(name.group(1))
 
             icon = re.search('<icon.*?src="(.*?)"', channel)
             if icon:
@@ -666,22 +675,22 @@ def xml_update():
                 m3u_streams[id] = '#EXTINF:-1 %stvg-name="%s" tvg-id="%s" tvg-logo="%s" group-title="%s",%s\n%s\n' % (radio_flag,name,ids.get(id,id),icon,group_label,name,streams.get(id,'http://localhost'))
 
         for programme in xprogrammes:
-            if encoding:
-                programme = programme.decode(encoding)
+#            if encoding:
+#                programme = programme.decode(encoding)
             id = re.search('channel="(.*?)"', programme)
             if id:
-                id = htmlparser.unescape(id.group(1))
+                id = html.unescape(id.group(1))
 
                 if id in channels:
                     selected_programmes.append(programme)
 
         if url.endswith('/dummy.xml'):
             for channel in xchannels:
-                if encoding:
-                    channel = channel.decode(encoding)
+#                if encoding:
+#                    channel = channel.decode(encoding)
                 id = re.search('id="(.*?)"', channel)
                 if id:
-                    id = htmlparser.unescape(id.group(1))
+                    id = html.unescape(id.group(1))
                 if id in channels:
                     now = datetime.datetime.now()
                     now = now.replace(hour=plugin.get_setting('dummy.offset',int),minute=0,second=0)
@@ -757,7 +766,7 @@ def xml_update():
             programme = re.sub('channel=".*?"', 'channel="%s"' % new_id, programme)
         new_selected_programmes.append(programme)
 
-    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
+    f = xbmcvfs.File(xmltv_location()+"/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
     f.write('\n\n'.join(new_xmltv_channels).encode("utf8"))
@@ -769,7 +778,7 @@ def xml_update():
     f.close()
 
     for url in m3us:
-        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
+        filename = xbmcvfs.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
         success = xbmcvfs.copy(url,filename)
         if success:
             fu = xbmcvfs.File(filename,"r")
@@ -823,13 +832,13 @@ def update():
     new_channel_xml = [channel_xml[id] for id in sorted(channel_xml, key=lambda k: order.get(k,-1))]
 
 
-    f = xbmcvfs.File("special://profile/addon_data/plugin.program.xmltv.meld/xmltv.xml",'w')
+    f = xbmcvfs.File(xmltv_location()+"/xmltv.xml",'w')
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     f.write('<tv generator-info-name="xmltv Meld" >\n\n')
     f.write('\n\n'.join(new_channel_xml).encode("utf8"))
     f.write('\n\n\n')
     for programme in programme_xml:
-        f.write(programme.encode("utf8")+'\n\n')
+        f.write(programme+'\n\n')
     f.write('\n')
     f.write('</tv>\n')
     f.close()
@@ -840,7 +849,7 @@ def update():
         line = m3u_streams[id]
         if line is not None:
             line = "%s\n" % line
-            f.write(line.encode("utf8"))
+            f.write(line)
     f.write('\n')
     f.close()
 
@@ -886,8 +895,8 @@ def create_json_channels():
     if not xbmcvfs.exists(path):
         channels = plugin.get_storage('channels')
         zap_channels = plugin.get_storage('zap2_channels')
-        all_channels = dict(channels.items())
-        all_channels.update(dict(zap_channels.items()))
+        all_channels = dict(list(channels.items()))
+        all_channels.update(dict(list(zap_channels.items())))
         f = xbmcvfs.File(path,'w')
         f.write(json.dumps(sorted(all_channels.keys()),indent=0))
         f.close()
@@ -966,10 +975,10 @@ def remove_dummy_channel(url):
     channels = plugin.get_storage('channels')
     names = plugin.get_storage('names')
     try:
-        index = streams.values().index(url)
+        index = list(streams.values()).index(url)
     except:
         return
-    id = streams.keys()[index]
+    id = list(streams.keys())[index]
     if id in streams:
         del streams[id]
     if id in channels:
@@ -1166,7 +1175,7 @@ def guess_channel_stream_dialog(id,name):
                 other.append(("other","[COLOR blue]"+label+"[/COLOR]",addon,addon_label,folder,folder_label,file))
 
     for url in m3us:
-        filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + urllib.quote(m3us[url]))
+        filename = xbmcvfs.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + urllib.parse.quote(m3us[url]))
         if filename in m3u_contents:
             data = json.loads(m3u_contents[filename])
         else:
@@ -1178,7 +1187,7 @@ def guess_channel_stream_dialog(id,name):
             else:
                 continue
 
-        channels = re.findall('#EXTINF:(.*?)(?:\r\n|\r|\n)(.*?)(?:\r\n|\r|\n|$)', data, flags=(re.I | re.DOTALL))
+        channels = re.findall('#EXTINF:(.*?)(?:\r\n|\r|\n)(.*?)(?:\r\n|\r|\n|$)', data.decode('utf-8'), flags=(re.I | re.DOTALL))
         for channel in channels:
             label = channel[0].rsplit(',', 1)[-1]
             file = channel[1]
@@ -1221,8 +1230,8 @@ def guess_streams_function(missing=False):
     streams = plugin.get_storage('streams')
     names = plugin.get_storage('names')
 
-    all_channels = dict(channels.items())
-    all_channels.update(dict(zap_channels.items()))
+    all_channels = dict(list(channels.items()))
+    all_channels.update(dict(list(zap_channels.items())))
 
     icons = plugin.get_storage('icons')
 
@@ -1397,13 +1406,13 @@ def delete_all_channels(url,description):
 
 @plugin.route('/select_channels/<url>/<description>')
 def select_channels(url, description, add_all=False, remove_all=False):
-    description = description.decode("utf8")
+#    description = description.decode("utf8")
     #icons = plugin.get_storage('icons')
     #log(url)
     if '\\' in url:
         url = url.replace('\\','/')
 
-    filename = xbmc.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
+    filename = xbmcvfs.translatePath("special://profile/addon_data/plugin.program.xmltv.meld/temp/" + url.rsplit('?',1)[0].rsplit('/',1)[-1])
 
     with open(filename,'wb') as f:
         if url.startswith('http') or url.startswith('ftp'):
@@ -1433,17 +1442,17 @@ def select_channels(url, description, add_all=False, remove_all=False):
     items = []
     channels = plugin.get_storage('xml_channels')
 
-    match = re.findall('<channel(.*?)</channel>', decode(data), flags=(re.I|re.DOTALL))
+    match = re.findall('<channel(.*?)</channel>', data, flags=(re.I|re.DOTALL))
     if match:
 
         for m in match:
             id = re.search('id="(.*?)"', m)
             if id:
-                id = htmlparser.unescape(id.group(1))
+                id = html.unescape(id.group(1))
 
             name = re.search('<display-name.*?>(.*?)</display-name', m)
             if name:
-                name = htmlparser.unescape(name.group(1))
+                name = html.unescape(name.group(1))
 
             icon = re.search('<icon.*?src="(.*?)"', m)
             if icon:
@@ -1524,7 +1533,7 @@ def custom_xmltv():
 
     xmltv = plugin.get_storage('xmltv')
     for url in sorted(custom,key=lambda x: custom[x]):
-        name = custom[url].decode("utf8")
+        name = custom[url]
 
         context_items = []
         if url not in xmltv:
@@ -1553,8 +1562,8 @@ def rytec_xmltv():
     xml_urls = {xml_channels[x][0] for x in xml_channels}
     #log(xml_urls)
 
-    #sources = xbmcvfs.File("http://rytec.ricx.nl/epg_data/rytec.WoS.sources.xml","r").read()
-    sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml","r").read()
+    #sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xmls|acceptencoding=","r").read()
+    sources = requests.get("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml").content.decode('utf-8')
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
@@ -1594,7 +1603,7 @@ def koditvepg_xmltv():
 
     items = []
     xmltv = plugin.get_storage('xmltv')
-    for url,description in urls.iteritems():
+    for url,description in urls.items():
 
         context_items = []
         if url not in xmltv:
@@ -1832,7 +1841,7 @@ def move_channel(id):
 def zap_all_channels():
     channels = plugin.get_storage('zap2_channels')
     all = []
-    for id,(name,id,country,thumbnail) in channels.items():
+    for id,(name,id,country,thumbnail) in list(channels.items()):
         all.append({
             "id": id,
             "name": name,
@@ -1845,14 +1854,14 @@ def zap_all_channels():
 def xml_all_channels():
     channels = plugin.get_storage('xml_channels')
     all = []
-    for id,(url,description,name,id,thumbnail) in channels.items():
+    for id,(url,description,name,id,thumbnail) in list(channels.items()):
         #log((id,(url,description,name,id,thumbnail)))
         all.append({
             "id": decode(id),
             "name": decode(name),
             "thumbnail": thumbnail,
             "provider": "xml",
-            "country": description.decode("utf8"),
+            "country": description,
         })
     return all
 
