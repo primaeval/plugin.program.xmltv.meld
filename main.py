@@ -462,9 +462,7 @@ def create_json_channels():
     path = profile()+'id_order.json'
     if not xbmcvfs.exists(path):
         channels = plugin.get_storage('channels')
-        zap_channels = plugin.get_storage('zap2_channels')
         all_channels = dict(list(channels.items()))
-        all_channels.update(dict(list(zap_channels.items())))
         f = xbmcvfs.File(path,'w')
         f.write(json.dumps(sorted(all_channels.keys()),indent=0))
         f.close()
@@ -608,32 +606,6 @@ def rename_channel(id,name):
     xbmc.executebuiltin('Container.Refresh')
 
 
-@plugin.route('/radio_stream/<id>')
-def radio_stream(id):
-    id = decode(id)
-    channels = plugin.get_storage('channels')
-    radio_stream_dialog(id,channels)
-
-
-@plugin.route('/zap_radio_stream/<id>')
-def zap_radio_stream(id):
-    id = decode(id)
-    channels = plugin.get_storage('zap2_channels')
-    radio_stream_dialog(id,channels)
-
-
-def radio_stream_dialog(id,channels):
-    radio = plugin.get_storage('radio')
-    names = plugin.get_storage('names')
-    name = channels[id]
-    new_name = names.get(id,name)
-    ids = plugin.get_storage('ids')
-    new_id = ids.get(id,id)
-
-    radio[id] = xbmcgui.Dialog().yesno(new_name,"Radio?")
-
-
-@plugin.route('/add_all_channels/<url>/<description>')
 def add_all_channels(url,description):
     select_channels(url,description,add_all=True)
 
@@ -834,53 +806,6 @@ def rytec_xmltv():
     return items
 
 
-@plugin.route('/sort_channels')
-def sort_channels():
-    order = plugin.get_storage('order')
-
-    all_channels = Yo().all_channels()
-
-    new_order = []
-    for channel in sorted(all_channels, key = lambda k: (k["provider"],k["country"],k["name"])):
-        cid = channel["id"]
-        new_order.append(cid)
-
-    order.clear()
-    for i,cid in enumerate(new_order):
-        order[cid] = i
-
-
-@plugin.route('/move_channel/<id>')
-def move_channel(id):
-    order = plugin.get_storage('order')
-
-    all_channels = Yo().all_channels() + xml_all_channels() + zap_all_channels()
-
-    channels = []
-    name = ""
-    new_order = []
-    for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
-        label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),channel["name"],channel["provider"],channel["country"])
-        cid = channel["id"]
-        thumbnail = channel["thumbnail"]
-        channels.append((cid,label))
-        if cid == id:
-            name = label
-        new_order.append(cid)
-
-    labels = [c[1] for c in channels]
-
-    index = xbmcgui.Dialog().select('%s: Move After?' % name, labels)
-    if index == -1:
-        return
-
-    oldindex = new_order.index(id)
-    new_order.insert(index+1, new_order.pop(oldindex))
-    order.clear()
-    for i,cid in enumerate(new_order):
-        order[cid] = i
-
-
 def xml_all_channels():
     channels = plugin.get_storage('xml_channels')
     all = []
@@ -914,7 +839,6 @@ def channels():
         #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Remove Channel", 'RunPlugin(%s)' % (plugin.url_for(delete_channel, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Change Channel Id", 'RunPlugin(%s)' % (plugin.url_for(rename_channel_id, id=id.encode("utf8")))))
         context_items.append(("[COLOR yellow]%s[/COLOR]" %"Rename Channel", 'RunPlugin(%s)' % (plugin.url_for(rename_channel, id=id.encode("utf8"), name=name.encode("utf8")))))
-        #context_items.append(("[COLOR yellow]%s[/COLOR]" %"Radio", 'RunPlugin(%s)' % (plugin.url_for(radio_stream, id=id.encode("utf8")))))
 
         items.append(
         {
@@ -1069,7 +993,6 @@ def index():
     })
     '''
     context_items = []
-    #context_items.append(("[COLOR yellow]%s[/COLOR]" %'Sort Channels', 'RunPlugin(%s)' % (plugin.url_for('sort_channels'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Merge m3u', 'RunPlugin(%s)' % (plugin.url_for('add_merge_m3u'))))
     context_items.append(("[COLOR yellow]%s[/COLOR]" %'Remove m3u', 'RunPlugin(%s)' % (plugin.url_for('remove_merge_m3u'))))
     items.append(
