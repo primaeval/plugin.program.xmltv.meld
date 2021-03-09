@@ -606,6 +606,7 @@ def rename_channel(id,name):
     xbmc.executebuiltin('Container.Refresh')
 
 
+@plugin.route('/add_all_channels/<url>/<description>')
 def add_all_channels(url,description):
     select_channels(url,description,add_all=True)
 
