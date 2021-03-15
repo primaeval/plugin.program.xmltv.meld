@@ -209,7 +209,7 @@ def xml_update():
                 #data = xbmcvfs.File(filename,'r').read()
                 data = requests.get(filename).content
             else:
-                f = open(filename,'r')
+                f = open(filename,'r', encoding='utf-8')
                 data = f.read()
                 f.close()
 
