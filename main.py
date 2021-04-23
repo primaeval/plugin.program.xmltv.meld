@@ -777,7 +777,8 @@ def rytec_xmltv():
     #log(xml_urls)
 
     #sources = xbmcvfs.File("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xmls|acceptencoding=","r").read()
-    sources = requests.get("http://rytecepg.dyndns.tv/epg_data/rytec.WoS.sources.xml").content.decode('utf8')
+    sources = requests.get("http://rytecepg.epgspot.com/epg_data/rytec.King.sources.xml").content.decode('utf8')
+    #sources = requests.get("http://rytecepg.dyndns.tv/epg_data/rytec.WoS.sources.xml").content.decode('utf8')
 
     urls = re.findall('<source.*?channels="(.*?)">.*?<description>(.*?)</description>.*?<url>(.*?)<',sources,flags=(re.I|re.DOTALL))
 
@@ -851,6 +852,35 @@ def channels():
 
     return items
 
+@plugin.route('/move_channel/<id>')
+def move_channel(id):
+    order = plugin.get_storage('order')
+
+    all_channels = xml_all_channels()
+
+    channels = []
+    name = ""
+    new_order = []
+    for channel in sorted(all_channels, key = lambda k: order.get(k["id"],-1)):
+        label = "%d - %s - [%s] - %s" % (order.get(channel["id"],-1),channel["name"],channel["provider"],channel["country"])
+        cid = channel["id"]
+        thumbnail = channel["thumbnail"]
+        channels.append((cid,label))
+        if cid == id:
+            name = label
+        new_order.append(cid)
+
+    labels = [c[1] for c in channels]
+
+    index = xbmcgui.Dialog().select('%s: Move After?' % name, labels)
+    if index == -1:
+        return
+
+    oldindex = new_order.index(id)
+    new_order.insert(index+1, new_order.pop(oldindex))
+    order.clear()
+    for i,cid in enumerate(new_order):
+        order[cid] = i
 
 
 @plugin.route('/add_dummy_channels/<id>/<path>')
