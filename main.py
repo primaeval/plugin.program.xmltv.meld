@@ -21,6 +21,7 @@ from rpc import RPC
 from bs4 import BeautifulSoup
 import collections
 import operator
+import archive_tool
 
 plugin = Plugin()
 big_list_view = False
@@ -636,10 +637,8 @@ def select_channels(url, description, add_all=False, remove_all=False):
             f.write(xbmcvfs.File(url).read().encode('utf8'))
 
     if filename.endswith('.xz'):
-        f = open(filename+".xml","w")
-        subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=windows())
-        f.close()
-        data = xbmcvfs.File(filename+'.xml','r').read()
+        archive_tool.archive_tool(archive_file = filename,directory_out = './').extract()
+        data = xbmcvfs.File(filename[:-3],'r').read()
     elif filename.endswith('.gz'):
         try:
             f = open(filename[:-3],"w")
