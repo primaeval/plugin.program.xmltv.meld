@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="plugin.program.xmltv.meld"
-version="0.0.64"
+version="1.0.7"
 name="xmltv Meld"
-provider-name="primaeval">
+provider-name="marynius">
 <requires>
-  <import addon="xbmc.python" version="2.20.0"/>
-  <import addon="script.module.xbmcswift2" version="2.4.0"/>
-  <import addon="script.module.requests" version="2.9.1" />
+  <import addon="xbmc.python" version="3.0.0"/>
+  <import addon="script.module.xbmcswift2"/>
+  <import addon="script.module.requests" />
   <import addon="script.module.beautifulsoup4"  />
 </requires>
 <extension point="xbmc.python.pluginsource" library="main.py">
@@ -19,4 +19,3 @@ provider-name="primaeval">
   <disclaimer lang="en"></disclaimer>
 </extension>
 </addon>
-
