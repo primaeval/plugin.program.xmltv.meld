@@ -15,13 +15,12 @@ import os,os.path
 import stat
 import platform
 import pickle
-#import lzma
 from html.parser import HTMLParser
 from rpc import RPC
 from bs4 import BeautifulSoup
 import collections
 import operator
-import archive_tool
+import lzma, gzip
 
 plugin = Plugin()
 big_list_view = False
@@ -97,41 +96,9 @@ def xmltv_location():
     else:
         xbmcgui.Dialog().notification("xmltv Meld","xmltv location not found",xbmcgui.NOTIFICATION_ERROR)
 
-def busybox_location():
-    busybox_src = xbmcvfs.translatePath(plugin.get_setting('busybox'))
-
-    if xbmc.getCondVisibility('system.platform.android'):
-        busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
-        #log((busybox_dst,xbmcvfs.exists(busybox_dst)))
-        if not xbmcvfs.exists(busybox_dst) and busybox_src != busybox_dst:
-            xbmcvfs.copy(busybox_src, busybox_dst)
-
-        busybox = busybox_dst
-    else:
-        busybox = busybox_src
-
-    if busybox:
-        try:
-            st = os.stat(busybox)
-            if not (st.st_mode & stat.S_IXUSR):
-                try:
-                    os.chmod(busybox, st.st_mode | stat.S_IXUSR)
-                except:
-                    pass
-        except:
-            pass
-    if xbmcvfs.exists(busybox):
-        return busybox
-    else:
-        xbmcgui.Dialog().notification("xmltv Meld","busybox not found",xbmcgui.NOTIFICATION_ERROR)
-
 
 @plugin.route('/reset')
 def reset():
-    if xbmc.getCondVisibility('system.platform.android'):
-        busybox_dst = '/data/data/%s/busybox' % android_get_current_appid()
-        xbmcvfs.delete(busybox_dst)
-
     if not (xbmcgui.Dialog().yesno("xmltv Meld", "[COLOR red]" + "Remove Channels?" + "[/COLOR]")):
         return
 
@@ -193,18 +160,9 @@ def xml_update():
             continue
 
         if filename.endswith('.xz'):
-            f = open(filename+".xml","w")
-            subprocess.call([busybox_location(),"xz","-dc",filename],stdout=f,shell=windows())
-            f.close()
-            data = xbmcvfs.File(filename+'.xml','r').read()
+            data = lzma.open(filename).read().decode('utf8')
         elif filename.endswith('.gz'):
-            try:
-                f = open(filename[:-3],"w")
-            except:
-                f = open(filename,"w")
-            subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=windows())
-            f.close()
-            data = xbmcvfs.File(filename[:-3],'r').read()
+            data = gzip.open(filename).read().decode('utf8')
         else:
             if filename.startswith("http"):
                 #data = xbmcvfs.File(filename,'r').read()
@@ -637,16 +595,9 @@ def select_channels(url, description, add_all=False, remove_all=False):
             f.write(xbmcvfs.File(url).read().encode('utf8'))
 
     if filename.endswith('.xz'):
-        archive_tool.archive_tool(archive_file = filename,directory_out = './').extract()
-        data = xbmcvfs.File(filename[:-3],'r').read()
+        data = lzma.open(filename).read().decode('utf8')
     elif filename.endswith('.gz'):
-        try:
-            f = open(filename[:-3],"w")
-        except:
-            f = open(filename,"w")
-        subprocess.call([busybox_location(),"gunzip","-dc",filename],stdout=f,shell=windows())
-        f.close()
-        data = xbmcvfs.File(filename[:-3],'r').read()
+        data = gzip.open(filename).read().decode('utf8')
     else:
         data = xbmcvfs.File(filename,'r').read()
 
@@ -983,14 +934,6 @@ def remove_xmltv_channels():
             id = xmltv_label[index]["id"]
             delete_channel(id)
 
-@plugin.route('/delete_busybox')
-def delete_busybox():
-    busybox = busybox_location()
-    success = xbmcvfs.delete(busybox)
-    if success:
-        xbmcgui.Dialog().notification("xmltv Meld", "busybox deleted")
-
-
 @plugin.route('/')
 def index():
     items = []
@@ -1041,8 +984,6 @@ def index():
     })
 
     context_items = []
-    if xbmc.getCondVisibility('system.platform.android'):
-        context_items.append(("[COLOR yellow]%s[/COLOR]" %'Delete busybox', 'RunPlugin(%s)' % (plugin.url_for('delete_busybox'))))
     items.append(
     {
         'label': "Reset",
